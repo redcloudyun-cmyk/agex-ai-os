@@ -27,6 +27,18 @@ export interface ExecutionRecord {
   result?: unknown;
 }
 
+const TERMINAL_STATES: ReadonlySet<ExecutionState> = new Set([
+  'COMPLETED',
+  'FAILED',
+  'CANCELLED',
+  'TIMED_OUT',
+  'TERMINATED',
+]);
+
+// Rule 16: Retry must be bounded. Once exhausted the execution is marked
+// FAILED instead of being restored again.
+const MAX_RESTORE_ATTEMPTS = 5;
+
 export class DurableRuntimeEngine {
   private executionStore: Map<string, ExecutionRecord> = new Map();
 
@@ -48,16 +60,20 @@ export class DurableRuntimeEngine {
     return record;
   }
 
-  public transitionState(id: string, newState: ExecutionState, result?: unknown): ExecutionRecord {
-    const record = this.executionStore.get(id);
-    if (!record) {
-      throw new AgexError({
-        code: 'EXECUTION_NOT_FOUND',
-        category: 'NOT_FOUND',
-        message: `Execution ID ${id} not found in Durable Store.`,
-        request_id: 'rt_req',
-      });
-    }
+  /**
+   * @param expectedTenantId When provided, the execution's owning tenant must
+   * match or the call is rejected (Rule 13: Cross-Tenant access is Default
+   * Deny). Omit only for trusted internal system callers (e.g. the
+   * Reconciler) that intentionally operate across tenants.
+   */
+  public transitionState(
+    id: string,
+    newState: ExecutionState,
+    result?: unknown,
+    expectedTenantId?: string
+  ): ExecutionRecord {
+    const record = this.getOwnedRecord(id, expectedTenantId);
+    this.assertNotTerminal(record);
 
     record.state = newState;
     record.updated_at = getCurrentISOString();
@@ -69,13 +85,19 @@ export class DurableRuntimeEngine {
     return record;
   }
 
-  public restoreCheckpoint(id: string, checkpointId: string): ExecutionRecord {
-    const record = this.executionStore.get(id);
-    if (!record) {
+  /** @param expectedTenantId see {@link transitionState}. */
+  public restoreCheckpoint(id: string, checkpointId: string, expectedTenantId?: string): ExecutionRecord {
+    const record = this.getOwnedRecord(id, expectedTenantId);
+    this.assertNotTerminal(record);
+
+    if (record.attempt >= MAX_RESTORE_ATTEMPTS) {
+      record.state = 'FAILED';
+      record.updated_at = getCurrentISOString();
+      this.executionStore.set(id, record);
       throw new AgexError({
-        code: 'EXECUTION_NOT_FOUND',
-        category: 'NOT_FOUND',
-        message: `Execution ID ${id} not found for checkpoint restore.`,
+        code: 'MAX_RETRY_ATTEMPTS_EXCEEDED',
+        category: 'RUNTIME',
+        message: `Execution ID ${id} exceeded the maximum of ${MAX_RESTORE_ATTEMPTS} restore attempts and has been marked FAILED.`,
         request_id: 'rt_req',
       });
     }
@@ -87,5 +109,39 @@ export class DurableRuntimeEngine {
 
     this.executionStore.set(id, record);
     return record;
+  }
+
+  private getOwnedRecord(id: string, expectedTenantId?: string): ExecutionRecord {
+    const record = this.executionStore.get(id);
+    if (!record) {
+      throw new AgexError({
+        code: 'EXECUTION_NOT_FOUND',
+        category: 'NOT_FOUND',
+        message: `Execution ID ${id} not found in Durable Store.`,
+        request_id: 'rt_req',
+      });
+    }
+
+    if (expectedTenantId && record.tenant_id !== expectedTenantId) {
+      throw new AgexError({
+        code: 'CROSS_TENANT_ACCESS_DENIED',
+        category: 'AUTHORIZATION',
+        message: `Execution ID ${id} does not belong to the requesting tenant.`,
+        request_id: 'rt_req',
+      });
+    }
+
+    return record;
+  }
+
+  private assertNotTerminal(record: ExecutionRecord): void {
+    if (TERMINAL_STATES.has(record.state)) {
+      throw new AgexError({
+        code: 'EXECUTION_ALREADY_TERMINAL',
+        category: 'CONFLICT',
+        message: `Execution ID ${record.id} is already in terminal state ${record.state} and cannot be mutated further.`,
+        request_id: 'rt_req',
+      });
+    }
   }
 }

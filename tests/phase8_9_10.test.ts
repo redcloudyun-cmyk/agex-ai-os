@@ -5,6 +5,7 @@ import { BillingLedgerEngine } from '../src/billing/billing.ledger.js';
 import { AgexPlatformApiServer } from '../src/server.js';
 import { PolicyDecisionPoint } from '../src/identity/pdp.js';
 import { DurableRuntimeEngine } from '../src/runtime/runtime.engine.js';
+import { validateTenantResource, type TenantResource } from '../src/tenant/tenant.model.js';
 
 test('1. Audit Logger Sensitive Data Masking Rule', () => {
   const logger = new AuditLogger();
@@ -45,7 +46,7 @@ test('2. Billing Ledger Engine Idempotency & Adjustment', () => {
     idempotency_key: 'idem_unique_123',
   });
 
-  assert.ok(usage.usage_id.startsWith('aud_'));
+  assert.ok(usage.usage_id.startsWith('usg_'));
 
   // 2b. Duplicate Usage Record attempt -> Should throw Conflict Error
   assert.throws(
@@ -108,4 +109,59 @@ test('3. AGEX Platform API Server Endpoints & Security Interception', async () =
   const logs = logger.getAuditLogs('ten_001');
   assert.strictEqual(logs.length, 1);
   assert.strictEqual(logs[0].action, 'agent:execute');
+});
+
+test('4. Tenant Resource Specification Validation', () => {
+  const actor = { type: 'user' as const, id: 'usr_platform_admin' };
+  const baseTenant: TenantResource = {
+    api_version: 'agex/v1',
+    kind: 'Tenant',
+    metadata: {
+      id: 'ten_valid_001',
+      scope_type: 'PLATFORM',
+      revision: 1,
+      lifecycle_state: 'ACTIVE',
+      created_at: '2026-08-01T00:00:00Z',
+      updated_at: '2026-08-01T00:00:00Z',
+      created_by: actor,
+      updated_by: actor,
+    },
+    specification: {
+      display_name: 'AGEX Production Tenant',
+      home_region: 'ap-northeast-2',
+      isolation_profile: 'ISOLATED_DATA',
+      maximum_autonomy_level: 'L2',
+    },
+    status: { state: 'ACTIVE' },
+  };
+
+  // 4a. Well-formed spec passes
+  assert.doesNotThrow(() => validateTenantResource(baseTenant));
+
+  // 4b. Missing home_region is rejected
+  assert.throws(
+    () => validateTenantResource({
+      ...baseTenant,
+      specification: { ...baseTenant.specification, home_region: '' },
+    }),
+    (err: any) => err.code === 'VALIDATION_ERROR'
+  );
+
+  // 4c. Invalid isolation_profile is rejected
+  assert.throws(
+    () => validateTenantResource({
+      ...baseTenant,
+      specification: { ...baseTenant.specification, isolation_profile: 'GARBAGE' as any },
+    }),
+    (err: any) => err.code === 'VALIDATION_ERROR'
+  );
+
+  // 4d. Invalid maximum_autonomy_level is rejected
+  assert.throws(
+    () => validateTenantResource({
+      ...baseTenant,
+      specification: { ...baseTenant.specification, maximum_autonomy_level: 'L9' as any },
+    }),
+    (err: any) => err.code === 'VALIDATION_ERROR'
+  );
 });

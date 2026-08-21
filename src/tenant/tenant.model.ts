@@ -5,6 +5,14 @@ export type IsolationProfile = 'SHARED' | 'ISOLATED_DATA' | 'ISOLATED_RUNTIME' |
 export type AutonomyLevel = 'L0' | 'L1' | 'L2' | 'L3' | 'L4' | 'L5';
 export type TenantState = 'PROVISIONING' | 'ACTIVE' | 'RESTRICTED' | 'SUSPENDED' | 'CLOSING' | 'DELETING' | 'DELETED';
 
+const VALID_ISOLATION_PROFILES: ReadonlySet<IsolationProfile> = new Set([
+  'SHARED',
+  'ISOLATED_DATA',
+  'ISOLATED_RUNTIME',
+  'DEDICATED',
+]);
+const VALID_AUTONOMY_LEVELS: ReadonlySet<AutonomyLevel> = new Set(['L0', 'L1', 'L2', 'L3', 'L4', 'L5']);
+
 export interface TenantSpecification {
   display_name: string;
   home_region: string;
@@ -55,6 +63,33 @@ export function validateTenantResource(tenant: TenantResource): void {
       code: 'VALIDATION_ERROR',
       category: 'VALIDATION',
       message: `Tenant display_name is required.`,
+      request_id: 'val_req',
+    });
+  }
+
+  if (!tenant.specification.home_region) {
+    throw new AgexError({
+      code: 'VALIDATION_ERROR',
+      category: 'VALIDATION',
+      message: `Tenant home_region is required.`,
+      request_id: 'val_req',
+    });
+  }
+
+  if (!VALID_ISOLATION_PROFILES.has(tenant.specification.isolation_profile)) {
+    throw new AgexError({
+      code: 'VALIDATION_ERROR',
+      category: 'VALIDATION',
+      message: `Invalid isolation_profile: ${tenant.specification.isolation_profile}.`,
+      request_id: 'val_req',
+    });
+  }
+
+  if (!VALID_AUTONOMY_LEVELS.has(tenant.specification.maximum_autonomy_level)) {
+    throw new AgexError({
+      code: 'VALIDATION_ERROR',
+      category: 'VALIDATION',
+      message: `Invalid maximum_autonomy_level: ${tenant.specification.maximum_autonomy_level}.`,
       request_id: 'val_req',
     });
   }

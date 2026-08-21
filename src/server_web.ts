@@ -179,18 +179,19 @@ function handleApiRequest(
     const taskObjective = (body?.objective as string) || 'Unnamed task';
     const agentId = (body?.agent_id as string) || 'agt_market_analyst';
 
-    // PDP authorization check
+    // PDP authorization check. resource_tenant_id is intentionally omitted —
+    // see the doc comment on AuthorizationRequest.resource_tenant_id; this
+    // demo agentRegistry has no per-agent tenant ownership to resolve yet.
     const decision = pdp.evaluate({
       principal,
       tenant_context: tenantContext,
       action: 'agent:execute',
       resource_type: 'Agent',
       resource_id: agentId,
-      resource_tenant_id: tenantId,
       principal_permissions: ['agent:execute'],
     });
 
-    if (decision.decision === 'DENY') {
+    if (decision.decision !== 'ALLOW') {
       auditLogger.logEvent({
         actor: principal,
         tenant_id: tenantId,
@@ -200,7 +201,8 @@ function handleApiRequest(
         reason_code: decision.reason_code,
         request_id: `req_${Date.now()}`,
       });
-      return { status: 403, data: { error: 'PERMISSION_DENIED', reason: decision.reason_code } };
+      const status = decision.decision === 'CONDITIONAL' ? 202 : 403;
+      return { status, data: { error: decision.decision === 'CONDITIONAL' ? 'APPROVAL_REQUIRED' : 'PERMISSION_DENIED', reason: decision.reason_code } };
     }
 
     // Create execution via Durable Runtime Engine

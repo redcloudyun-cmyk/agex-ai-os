@@ -20,7 +20,9 @@ export type ResourcePrefix =
   | 'evt'
   | 'art'
   | 'op'
-  | 'aud';
+  | 'aud'
+  | 'usg'
+  | 'led';
 
 export function generateResourceId(prefix: ResourcePrefix): string {
   const opaqueId = crypto.randomBytes(8).toString('hex');

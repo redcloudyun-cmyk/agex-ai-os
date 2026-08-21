@@ -15,22 +15,32 @@ export interface AuditEventRecord {
   details?: Record<string, unknown>;
 }
 
+const SENSITIVE_DETAIL_KEYS = new Set(['secret', 'password', 'token', 'raw_cot']);
+
+// Recursively strips sensitive keys at any depth without mutating the input
+// (Rule 12/18: Secret/Token/Raw CoT must never reach the audit store).
+function sanitizeDetails(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(sanitizeDetails);
+  }
+  if (value && typeof value === 'object') {
+    const result: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+      if (SENSITIVE_DETAIL_KEYS.has(key)) continue;
+      result[key] = sanitizeDetails(val);
+    }
+    return result;
+  }
+  return value;
+}
+
 export class AuditLogger {
   private auditStore: AuditEventRecord[] = [];
 
   public logEvent(event: Omit<AuditEventRecord, 'audit_id' | 'timestamp'>): AuditEventRecord {
-    // Safety Rule: Never store Raw Secret, Raw Token, or Raw CoT in Audit Log (Rule 18 / S-05)
-    if (event.details) {
-      const sanitized = { ...event.details };
-      delete sanitized['secret'];
-      delete sanitized['password'];
-      delete sanitized['token'];
-      delete sanitized['raw_cot'];
-      event.details = sanitized;
-    }
-
     const auditRecord: AuditEventRecord = {
       ...event,
+      details: event.details ? (sanitizeDetails(event.details) as Record<string, unknown>) : undefined,
       audit_id: generateResourceId('aud'),
       timestamp: getCurrentISOString(),
     };
@@ -44,6 +54,7 @@ export class AuditLogger {
   }
 
   public getRecentLogs(limit: number): AuditEventRecord[] {
+    if (limit <= 0) return [];
     return this.auditStore.slice(-limit).reverse();
   }
 }

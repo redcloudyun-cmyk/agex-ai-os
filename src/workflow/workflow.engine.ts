@@ -49,7 +49,7 @@ export class WorkflowEngine {
     initialInput: Record<string, unknown>
   ): Promise<{ execution: ExecutionRecord; step_results: Record<string, unknown> }> {
     const execution = this.runtimeEngine.createExecution(tenantContext, workflow.id);
-    this.runtimeEngine.transitionState(execution.id, 'RUNNING');
+    this.runtimeEngine.transitionState(execution.id, 'RUNNING', undefined, tenantContext.tenant_id);
 
     const stepResults: Record<string, unknown> = {};
     let currentStepId: string | null = workflow.steps[0]?.id || null;
@@ -65,7 +65,7 @@ export class WorkflowEngine {
 
       if (step.type === 'APPROVAL') {
         // Pause execution and set state to WAITING with reason APPROVAL
-        this.runtimeEngine.transitionState(execution.id, 'WAITING');
+        this.runtimeEngine.transitionState(execution.id, 'WAITING', undefined, tenantContext.tenant_id);
         stepResults[step.id] = { status: 'WAITING_FOR_HUMAN_APPROVAL' };
         return { execution, step_results: stepResults };
       }
@@ -78,7 +78,7 @@ export class WorkflowEngine {
       currentStepId = edge ? edge.to : null;
     }
 
-    this.runtimeEngine.transitionState(execution.id, 'COMPLETED', stepResults);
+    this.runtimeEngine.transitionState(execution.id, 'COMPLETED', stepResults, tenantContext.tenant_id);
     return { execution, step_results: stepResults };
   }
 }

@@ -106,3 +106,35 @@ test('4. Durable Runtime Engine Execution & Checkpoint Restore', () => {
   assert.strictEqual(restored.checkpoint_id, 'chk_001');
   assert.strictEqual(restored.attempt, 2);
 });
+
+test('5. Durable Runtime: Bounded Retry, Terminal State Guard & Tenant Ownership', () => {
+  const engine = new DurableRuntimeEngine();
+  const tenantContext = { tenant_id: 'ten_001', scope_type: 'TENANT' as const };
+
+  // 5a. Bounded retry: restoreCheckpoint must eventually refuse and fail the execution
+  const exe = engine.createExecution(tenantContext, 'agt_retry_test');
+  for (let i = 0; i < 4; i++) {
+    engine.restoreCheckpoint(exe.id, `chk_${i}`);
+  }
+  assert.throws(
+    () => engine.restoreCheckpoint(exe.id, 'chk_final'),
+    (err: any) => err.code === 'MAX_RETRY_ATTEMPTS_EXCEEDED'
+  );
+
+  // 5b. Terminal state guard: a FAILED execution cannot be mutated further
+  assert.throws(
+    () => engine.transitionState(exe.id, 'RUNNING'),
+    (err: any) => err.code === 'EXECUTION_ALREADY_TERMINAL'
+  );
+
+  // 5c. Cross-tenant ownership check on state mutation
+  const exe2 = engine.createExecution(tenantContext, 'agt_owner_test');
+  assert.throws(
+    () => engine.transitionState(exe2.id, 'RUNNING', undefined, 'ten_other'),
+    (err: any) => err.code === 'CROSS_TENANT_ACCESS_DENIED'
+  );
+
+  // Same-tenant caller is still permitted
+  const running = engine.transitionState(exe2.id, 'RUNNING', undefined, tenantContext.tenant_id);
+  assert.strictEqual(running.state, 'RUNNING');
+});

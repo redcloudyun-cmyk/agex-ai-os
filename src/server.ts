@@ -68,18 +68,23 @@ export class AgexPlatformApiServer {
       if (req.path === '/api/v1/executions' && req.method === 'POST') {
         const targetId = (req.body?.target_resource_id as string) || 'agt_default';
 
-        // Evaluate PDP
+        // Evaluate PDP. resource_tenant_id is intentionally omitted: there is
+        // no Agent resource registry yet to resolve the target's *actual*
+        // owning tenant, and echoing the caller's own tenant_context here
+        // would make the cross-tenant check vacuously pass. See the
+        // resource_tenant_id doc comment on AuthorizationRequest.
+        // TODO(spec-gap): wire up a real Agent registry lookup once one
+        // exists so cross-tenant access to another tenant's Agent is denied.
         const decision = this.pdp.evaluate({
           principal,
           tenant_context: tenantContext,
           action: 'agent:execute',
           resource_type: 'Agent',
           resource_id: targetId,
-          resource_tenant_id: tenantContext.tenant_id,
           principal_permissions: ['agent:execute'],
         });
 
-        if (decision.decision === 'DENY') {
+        if (decision.decision !== 'ALLOW') {
           this.auditLogger.logEvent({
             actor: principal,
             tenant_id: tenantContext.tenant_id,
@@ -90,10 +95,11 @@ export class AgexPlatformApiServer {
             request_id: requestId,
           });
 
+          const requiresApproval = decision.decision === 'CONDITIONAL';
           throw new AgexError({
-            code: 'PERMISSION_DENIED',
-            category: 'AUTHORIZATION',
-            message: `Execution denied: ${decision.reason_code}`,
+            code: requiresApproval ? 'APPROVAL_REQUIRED' : 'PERMISSION_DENIED',
+            category: requiresApproval ? 'POLICY' : 'AUTHORIZATION',
+            message: `Execution ${requiresApproval ? 'requires approval' : 'denied'}: ${decision.reason_code}`,
             request_id: requestId,
           });
         }

@@ -6,6 +6,15 @@ export interface AuthorizationRequest {
   action: string; // 예: agent:execute, plugin:install
   resource_type: string;
   resource_id: string;
+  /**
+   * The tenant that actually OWNS the target resource, resolved from an
+   * authoritative resource registry — never the requester's own
+   * tenant_context.tenant_id. Echoing the caller's tenant here makes the
+   * cross-tenant check below vacuously true and silently defeats Rule 13
+   * (Cross-Tenant access is Default Deny). Leave undefined only when
+   * ownership is genuinely unresolvable (e.g. no registry wired up yet);
+   * in that case the check below is skipped rather than enforced.
+   */
   resource_tenant_id?: string | null;
   principal_permissions: string[];
   context?: Record<string, unknown>;

@@ -41,7 +41,7 @@ export class BillingLedgerEngine {
       });
     }
 
-    const usage_id = generateResourceId('aud'); // usage id
+    const usage_id = generateResourceId('usg');
     const usage: UsageRecord = {
       ...record,
       usage_id,
@@ -61,7 +61,7 @@ export class BillingLedgerEngine {
     reference: string
   ): LedgerEntry {
     const entry: LedgerEntry = {
-      ledger_entry_id: generateResourceId('aud'),
+      ledger_entry_id: generateResourceId('led'),
       billing_account_id: billingAccountId,
       entry_type: entryType,
       amount,

@@ -25,22 +25,25 @@ export class AgentExecutor {
     toolId: string,
     toolParams: Record<string, unknown>
   ): Promise<ToolInvocationResult> {
-    // 1. Authorize Execution Request via PDP
+    // 1. Authorize Execution Request via PDP. resource_tenant_id is
+    // intentionally omitted — see the doc comment on
+    // AuthorizationRequest.resource_tenant_id; there is no Agent resource
+    // registry yet to resolve the target's actual owning tenant.
     const authDecision = this.pdp.evaluate({
       principal,
       tenant_context: tenantContext,
       action: 'agent:execute',
       resource_type: 'Agent',
       resource_id: agentConfig.agent_id,
-      resource_tenant_id: tenantContext.tenant_id,
       principal_permissions: agentConfig.permissions,
     });
 
-    if (authDecision.decision === 'DENY') {
+    if (authDecision.decision !== 'ALLOW') {
+      const requiresApproval = authDecision.decision === 'CONDITIONAL';
       throw new AgexError({
-        code: 'EXECUTION_DENIED',
-        category: 'AUTHORIZATION',
-        message: `Agent execution denied by PDP: ${authDecision.reason_code}`,
+        code: requiresApproval ? 'APPROVAL_REQUIRED' : 'EXECUTION_DENIED',
+        category: requiresApproval ? 'POLICY' : 'AUTHORIZATION',
+        message: `Agent execution ${requiresApproval ? 'requires approval' : 'denied'} by PDP: ${authDecision.reason_code}`,
         request_id: 'exe_req',
       });
     }
