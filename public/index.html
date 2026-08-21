@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AGEX AI 워크스페이스 6.0 - Control Canvas</title>
+  <link rel="icon" type="image/png" href="assets/logo-mark-white-theme.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,7 +15,7 @@
         <button class="hamburger-btn" id="btn-hamburger" aria-label="메뉴 열기">
           <svg class="svg-icon" viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
         </button>
-        <img src="assets/logo-full.svg" alt="AGEX Logo" style="height:34px;">
+        <img src="assets/logo-full-white-theme.png" alt="AGEX" class="brand-logo-img">
         <span class="brand-badge">AI OS v0.1</span>
       </div>
 
@@ -144,7 +145,12 @@
       <section class="center-canvas">
         <!-- View 1: Workspace Home View -->
         <div id="view-workspace" class="tab-view active-view" style="display:flex; flex-direction:column; align-items:center;">
-          <h1 class="genspark-hero-title">AGEX AI 워크스페이스 6.0</h1>
+          <div class="hero-eyebrow">
+            <span class="dot-live"></span>
+            <span>Durable Runtime 연결됨</span>
+          </div>
+          <h1 class="genspark-hero-title"><img src="assets/logo-full-white-theme.png" alt="AGEX" class="hero-logo-img"> AI 워크스페이스 6.0</h1>
+          <p class="hero-subtitle">하나의 프롬프트로 리서치, 문서 작성, 코드 실행까지 — AGEX 멀티에이전트가 대신 처리합니다.</p>
 
           <div class="super-input-card">
             <textarea id="prompt-input" class="super-textarea" placeholder="무엇이든 물어보고 만들어보세요 (AGEX Durable Runtime 통과)...">금융 시장 동향을 분석하고 구조화된 리포트를 생성해줘</textarea>
@@ -250,8 +256,8 @@
         <!-- View 2: Knowledge Base & Files -->
         <div id="view-knowledge" class="tab-view" style="display:none; width:100%; max-width:860px;">
           <div class="feature-banner-card" style="flex-direction:column; align-items:flex-start; margin-bottom:1.5rem;">
-            <h2 style="font-family:var(--font-display); font-size:1.2rem; font-weight:700;">지식 저장소 및 문서 연결 (Knowledge Base)</h2>
-            <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0.2rem;">AI 에이전트가 답변 및 작업 시 참조할 문서(PDF, Word, TXT) 및 DB 연결을 관리합니다.</p>
+            <h2 class="section-heading">지식 저장소 및 문서 연결 (Knowledge Base)</h2>
+            <p class="section-desc">AI 에이전트가 답변 및 작업 시 참조할 문서(PDF, Word, TXT) 및 DB 연결을 관리합니다.</p>
           </div>
 
           <div style="background:#fff; border:1px solid var(--border-light); border-radius:14px; padding:1.5rem; width:100%;">
@@ -289,8 +295,8 @@
         <!-- View 3: Billing & Usage -->
         <div id="view-billing" class="tab-view" style="display:none; width:100%; max-width:860px;">
           <div class="feature-banner-card" style="flex-direction:column; align-items:flex-start; margin-bottom:1.5rem;">
-            <h2 style="font-family:var(--font-display); font-size:1.2rem; font-weight:700;">사용량 및 요금제 (Billing & Usage)</h2>
-            <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0.2rem;">현재 플랜, 남은 토큰 크레딧 및 이번 달 사용료 내역입니다.</p>
+            <h2 class="section-heading">사용량 및 요금제 (Billing & Usage)</h2>
+            <p class="section-desc">현재 플랜, 남은 토큰 크레딧 및 이번 달 사용료 내역입니다.</p>
           </div>
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; width:100%; margin-bottom:1.5rem;">
@@ -311,8 +317,8 @@
         <!-- View 4: Plugins View -->
         <div id="view-plugins" class="tab-view" style="display:none; width:100%; max-width:860px;">
           <div class="feature-banner-card" style="flex-direction:column; align-items:flex-start;">
-            <h2 style="font-family:var(--font-display); font-size:1.2rem; font-weight:700;">플러그인 및 서비스 연동</h2>
-            <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0.2rem;">Slack, GitHub, Google Workspace 등 외부 서비스를 연결합니다.</p>
+            <h2 class="section-heading">플러그인 및 서비스 연동</h2>
+            <p class="section-desc">Slack, GitHub, Google Workspace 등 외부 서비스를 연결합니다.</p>
           </div>
         </div>
       </section>

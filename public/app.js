@@ -52,12 +52,18 @@ document.addEventListener('DOMContentLoaded', () => {
       };
 
       const target = viewMap[tabId];
+      const activate = (el, display) => {
+        if (!el) return;
+        el.style.display = display;
+        el.classList.remove('view-enter');
+        void el.offsetWidth;
+        el.classList.add('view-enter');
+      };
+
       if (target) {
-        const el = document.getElementById(target.id);
-        if (el) el.style.display = target.display;
+        activate(document.getElementById(target.id), target.display);
       } else {
-        const ws = document.getElementById('view-workspace');
-        if (ws) ws.style.display = 'flex';
+        activate(document.getElementById('view-workspace'), 'flex');
       }
 
       if (manusPopover) manusPopover.style.display = 'none';
