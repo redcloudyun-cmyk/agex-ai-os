@@ -344,11 +344,17 @@ header {
   font-weight: 600;
   color: var(--text-main);
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .user-role-sub {
   font-size: 0.68rem;
   color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .arrow-icon {
@@ -831,6 +837,232 @@ header {
   color: #b45309;
 }
 
+/* Plugin Connector List */
+.connector-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: 100%;
+}
+
+.connector-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.connector-row:hover {
+  border-color: #dbeafe;
+  box-shadow: var(--shadow-sm);
+}
+
+.connector-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.connector-body {
+  flex: 1;
+}
+
+.connector-title {
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--text-main);
+}
+
+.connector-desc {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+.btn-connect {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--text-main);
+  padding: 0.32rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.btn-connect:hover {
+  border-color: var(--primary-blue);
+  color: var(--primary-blue);
+  background: #eff6ff;
+}
+
+/* Agents Grid */
+.agent-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.9rem;
+  width: 100%;
+}
+
+.agent-card {
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: 14px;
+  padding: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.agent-card:hover {
+  border-color: #dbeafe;
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+}
+
+.agent-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.7rem;
+}
+
+.agent-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.agent-name {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--text-main);
+  margin-bottom: 0.3rem;
+}
+
+.agent-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 0.7rem;
+}
+
+.agent-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  color: var(--text-light);
+  font-weight: 500;
+}
+
+.agent-card-new {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.5rem;
+  border-style: dashed;
+  border-color: var(--border-strong);
+  cursor: pointer;
+}
+
+.agent-card-new:hover {
+  border-color: var(--primary-blue);
+  background: var(--bg-subtle);
+}
+
+.agent-card-new .agent-desc {
+  margin-bottom: 0;
+}
+
+/* IAM Permission List */
+.iam-permission-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.iam-permission-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 0.2rem;
+  border-bottom: 1px solid var(--bg-subtle);
+  font-size: 0.82rem;
+  color: var(--text-main);
+}
+
+.iam-permission-row:last-child {
+  border-bottom: none;
+}
+
+/* Skills List */
+.skill-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: 100%;
+}
+
+.skill-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.skill-row:hover {
+  border-color: #dbeafe;
+  box-shadow: var(--shadow-sm);
+}
+
+.skill-row-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.skill-row-body {
+  flex: 1;
+}
+
+.skill-row-title {
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--text-main);
+  font-family: 'SFMono-Regular', Consolas, monospace;
+}
+
+.skill-row-desc {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
 .panel-card {
   background: var(--bg-subtle);
   border: 1px solid var(--border-light);
@@ -1059,6 +1291,10 @@ header {
   .suites-grid {
     grid-template-columns: repeat(3, 1fr);
     gap: 0.6rem;
+  }
+
+  .agent-grid {
+    grid-template-columns: 1fr;
   }
 
   .feature-banner-card {

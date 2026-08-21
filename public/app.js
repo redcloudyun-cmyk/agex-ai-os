@@ -38,7 +38,10 @@ document.addEventListener('DOMContentLoaded', () => {
   navItems.forEach(item => {
     item.addEventListener('click', () => {
       document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-      
+      if (item.classList.contains('nav-item')) {
+        item.classList.add('active');
+      }
+
       const tabId = item.getAttribute('data-tab');
       document.querySelectorAll('.tab-view').forEach(view => {
         view.style.display = 'none';
@@ -49,6 +52,10 @@ document.addEventListener('DOMContentLoaded', () => {
         'tab-knowledge': { id: 'view-knowledge', display: 'block' },
         'tab-billing': { id: 'view-billing', display: 'block' },
         'tab-plugins': { id: 'view-plugins', display: 'block' },
+        'tab-agents': { id: 'view-agents', display: 'block' },
+        'tab-library': { id: 'view-library', display: 'block' },
+        'tab-iam': { id: 'view-iam', display: 'block' },
+        'tab-skills': { id: 'view-skills', display: 'block' },
       };
 
       const target = viewMap[tabId];
@@ -70,6 +77,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // 모바일: 탭 전환 후 사이드바 닫기
       closeMobileSidebar();
+    });
+  });
+
+  // ─── Plugin Connector Buttons ───
+  document.querySelectorAll('.btn-connect').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const row = btn.closest('.connector-row');
+      const name = row ? row.querySelector('.connector-title').textContent : '서비스';
+      const statusTag = document.createElement('span');
+      statusTag.className = 'status-tag status-running';
+      statusTag.textContent = '연결됨';
+      btn.replaceWith(statusTag);
+      showToast(`${name} 연동 완료`);
     });
   });
 
