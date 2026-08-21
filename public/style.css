@@ -119,6 +119,24 @@ header {
   gap: 0.6rem;
 }
 
+.lang-toggle-btn {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: 7px;
+  padding: 0.24rem 0.6rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lang-toggle-btn:hover {
+  border-color: var(--primary-blue);
+  color: var(--primary-blue);
+  background: #eff6ff;
+}
+
 .tenant-pill {
   font-size: 0.74rem;
   padding: 0.24rem 0.6rem;

@@ -1,7 +1,18 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const i18n = window.AGEX_I18N;
+  if (i18n) i18n.applyLocale();
+
   const btnRun = document.getElementById('btn-run-task');
   const promptInput = document.getElementById('prompt-input');
   let executionCount = 14;
+
+  // ─── Language Toggle ───
+  const btnLangToggle = document.getElementById('btn-lang-toggle');
+  if (btnLangToggle && i18n) {
+    btnLangToggle.addEventListener('click', () => {
+      i18n.toggleLocale();
+    });
+  }
 
   // ─── Manus Style Profile Trigger & Popover Menu ───
   const userProfileTrigger = document.getElementById('user-profile-trigger');
@@ -28,7 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
     btnRun.addEventListener('click', () => {
       const taskText = promptInput.value.trim();
       if (!taskText) return;
-      showToast(`작업 디스패치 완료: "${taskText.substring(0, 30)}..."`);
+      const prefix = i18n ? i18n.t('toast.dispatched') : '작업 디스패치 완료:';
+      showToast(`${prefix} "${taskText.substring(0, 30)}..."`);
       promptInput.value = '';
     });
   }
@@ -84,12 +96,13 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.btn-connect').forEach(btn => {
     btn.addEventListener('click', () => {
       const row = btn.closest('.connector-row');
-      const name = row ? row.querySelector('.connector-title').textContent : '서비스';
+      const name = row ? row.querySelector('.connector-title').textContent : '';
       const statusTag = document.createElement('span');
       statusTag.className = 'status-tag status-running';
-      statusTag.textContent = '연결됨';
+      statusTag.textContent = i18n ? i18n.t('plugins.connected') : '연결됨';
       btn.replaceWith(statusTag);
-      showToast(`${name} 연동 완료`);
+      const suffix = i18n ? i18n.t('toast.connectDone') : '연동 완료';
+      showToast(`${name} ${suffix}`);
     });
   });
 
@@ -121,12 +134,15 @@ document.addEventListener('DOMContentLoaded', () => {
   let recognition = null;
   let isRecording = false;
 
+  function speechLangTag() {
+    return i18n && i18n.getLocale() === 'en' ? 'en-US' : 'ko-KR';
+  }
+
   if (btnVoiceInput) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     if (SpeechRecognition) {
       recognition = new SpeechRecognition();
-      recognition.lang = 'ko-KR';
       recognition.interimResults = true;
       recognition.continuous = false;
       recognition.maxAlternatives = 1;
@@ -134,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
       recognition.onstart = () => {
         isRecording = true;
         btnVoiceInput.classList.add('recording');
-        showToast('음성 인식 중...', true);
+        showToast(i18n ? i18n.t('toast.listening') : '음성 인식 중...', true);
       };
 
       recognition.onresult = (event) => {
@@ -152,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btnVoiceInput.classList.remove('recording');
         removeToast();
         if (promptInput && promptInput.value.trim()) {
-          showToast('음성 입력 완료!');
+          showToast(i18n ? i18n.t('toast.voiceDone') : '음성 입력 완료!');
         }
       };
 
@@ -161,11 +177,11 @@ document.addEventListener('DOMContentLoaded', () => {
         btnVoiceInput.classList.remove('recording');
         removeToast();
         if (event.error === 'not-allowed') {
-          showToast('마이크 접근이 거부되었습니다. 브라우저 설정을 확인하세요.');
+          showToast(i18n ? i18n.t('toast.micDenied') : '마이크 접근이 거부되었습니다. 브라우저 설정을 확인하세요.');
         } else if (event.error === 'no-speech') {
-          showToast('음성이 감지되지 않았습니다. 다시 시도해주세요.');
+          showToast(i18n ? i18n.t('toast.noSpeech') : '음성이 감지되지 않았습니다. 다시 시도해주세요.');
         } else {
-          showToast('음성 인식 오류: ' + event.error);
+          showToast((i18n ? i18n.t('toast.recognitionError') : '음성 인식 오류:') + ' ' + event.error);
         }
       };
 
@@ -173,12 +189,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isRecording) {
           recognition.stop();
         } else {
+          recognition.lang = speechLangTag();
           recognition.start();
         }
       });
     } else {
       btnVoiceInput.addEventListener('click', () => {
-        showToast('이 브라우저는 음성 인식을 지원하지 않습니다.');
+        showToast(i18n ? i18n.t('toast.sttUnsupported') : '이 브라우저는 음성 인식을 지원하지 않습니다.');
       });
     }
   }
@@ -201,24 +218,24 @@ document.addEventListener('DOMContentLoaded', () => {
         // 현재 입력창의 텍스트를 읽거나, 없으면 기본 AI 응답 텍스트를 읽음
         const textToSpeak = promptInput && promptInput.value.trim()
           ? promptInput.value.trim()
-          : 'AGEX AI 워크스페이스에 오신 것을 환영합니다. 원하시는 작업을 말씀해 주세요.';
+          : (i18n ? i18n.t('toast.defaultSpeak') : 'AGEX AI 워크스페이스에 오신 것을 환영합니다. 원하시는 작업을 말씀해 주세요.');
 
         const utterance = new SpeechSynthesisUtterance(textToSpeak);
-        utterance.lang = 'ko-KR';
+        const langTag = speechLangTag();
+        utterance.lang = langTag;
         utterance.rate = 1.0;
         utterance.pitch = 1.0;
 
-        // 한국어 음성 선택
         const voices = window.speechSynthesis.getVoices();
-        const koVoice = voices.find(v => v.lang.startsWith('ko'));
-        if (koVoice) {
-          utterance.voice = koVoice;
+        const matchedVoice = voices.find(v => v.lang.startsWith(langTag.split('-')[0]));
+        if (matchedVoice) {
+          utterance.voice = matchedVoice;
         }
 
         utterance.onstart = () => {
           isSpeaking = true;
           btnVoiceOutput.classList.add('speaking');
-          showToast('AI 음성 출력 중...');
+          showToast(i18n ? i18n.t('toast.speaking') : 'AI 음성 출력 중...');
         };
 
         utterance.onend = () => {
@@ -237,7 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     } else {
       btnVoiceOutput.addEventListener('click', () => {
-        showToast('이 브라우저는 음성 출력을 지원하지 않습니다.');
+        showToast(i18n ? i18n.t('toast.ttsUnsupported') : '이 브라우저는 음성 출력을 지원하지 않습니다.');
       });
     }
   }
