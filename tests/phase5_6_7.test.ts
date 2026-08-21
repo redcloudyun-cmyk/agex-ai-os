@@ -78,6 +78,14 @@ test('3. Memory Engine Lifecycle & Active Context Query', () => {
   const afterActive = memEngine.getActiveMemories('SESSION', 'usr_100');
   assert.strictEqual(afterActive.length, 1);
   assert.strictEqual(afterActive[0].content.value, 'dark');
+
+  // A memory already in a terminal lifecycle state (e.g. superseded by a
+  // newer fact) must not be silently resurrected by re-activation.
+  (memEngine as any).memoryStore.get(proposed.id).lifecycle = 'SUPERSEDED';
+  assert.throws(
+    () => memEngine.activateMemory(proposed.id),
+    (err: any) => err.code === 'MEMORY_ALREADY_TERMINAL'
+  );
 });
 
 test('4. Plugin Framework Sandbox Egress Control', () => {
@@ -92,13 +100,21 @@ test('4. Plugin Framework Sandbox Egress Control', () => {
   });
 
   // Allowed Egress
-  const allowed = pluginFw.validateEgressAccess('com.agex.slack-plugin', 'hooks.slack.com', 443);
+  const allowed = pluginFw.validateEgressAccess('com.agex.slack-plugin', 'hooks.slack.com', 443, 'HTTPS');
   assert.strictEqual(allowed, true);
 
   // Denied Egress (Unauthorized Host)
   assert.throws(
     () => {
-      pluginFw.validateEgressAccess('com.agex.slack-plugin', 'malicious.external.com', 443);
+      pluginFw.validateEgressAccess('com.agex.slack-plugin', 'malicious.external.com', 443, 'HTTPS');
+    },
+    (err: any) => err.code === 'PLUGIN_EGRESS_DENIED'
+  );
+
+  // Denied Egress (Correct Host/Port but Undeclared Protocol)
+  assert.throws(
+    () => {
+      pluginFw.validateEgressAccess('com.agex.slack-plugin', 'hooks.slack.com', 443, 'HTTP');
     },
     (err: any) => err.code === 'PLUGIN_EGRESS_DENIED'
   );

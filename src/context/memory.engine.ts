@@ -4,6 +4,13 @@ import { AgexError } from '../common/errors.js';
 export type MemoryScope = 'EXECUTION' | 'SESSION' | 'AGENT' | 'USER' | 'TENANT';
 export type MemoryLifecycle = 'PROPOSED' | 'VALIDATING' | 'ACTIVE' | 'CONFLICTED' | 'SUPERSEDED' | 'EXPIRED' | 'DELETED';
 
+const TERMINAL_MEMORY_STATES: ReadonlySet<MemoryLifecycle> = new Set([
+  'CONFLICTED',
+  'SUPERSEDED',
+  'EXPIRED',
+  'DELETED',
+]);
+
 export interface MemoryRecord {
   id: string;
   scope: MemoryScope;
@@ -50,6 +57,15 @@ export class MemoryEngine {
         code: 'MEMORY_NOT_FOUND',
         category: 'NOT_FOUND',
         message: `Memory ID ${id} not found.`,
+        request_id: 'mem_req',
+      });
+    }
+
+    if (TERMINAL_MEMORY_STATES.has(record.lifecycle)) {
+      throw new AgexError({
+        code: 'MEMORY_ALREADY_TERMINAL',
+        category: 'CONFLICT',
+        message: `Memory ID ${id} is in terminal state ${record.lifecycle} and cannot be reactivated.`,
         request_id: 'mem_req',
       });
     }

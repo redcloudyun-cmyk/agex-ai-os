@@ -1,6 +1,5 @@
 import { generateResourceId, getCurrentISOString } from '../common/utils.js';
 import { AgexError } from '../common/errors.js';
-import type { AgentExecutionConfig } from './agent.executor.js';
 
 export interface DelegationRequest {
   parent_agent_id: string;
@@ -35,7 +34,7 @@ export class MultiAgentOrchestrator {
     }
 
     return {
-      delegation_id: generateResourceId('exe'),
+      delegation_id: generateResourceId('dlg'),
       parent_agent_id: request.parent_agent_id,
       child_agent_id: request.child_agent_id,
       effective_permissions: effectivePermissions,

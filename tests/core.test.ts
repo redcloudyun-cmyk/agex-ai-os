@@ -90,6 +90,50 @@ test('3. Model Router Security-First Selection Order', () => {
   });
 
   assert.strictEqual(selected.model_id, 'claude-3-5-sonnet');
+
+  // Region/Residency must be a hard constraint (S-04 §2 step 5), not a soft
+  // preference that silently falls back to ignoring it.
+  assert.throws(
+    () => router.selectModel({
+      required_capabilities: ['TOOL_CALLING'],
+      data_classification: 'PUBLIC',
+      target_region: 'eu-west1',
+    }),
+    (err: any) => err.code === 'REGION_CONSTRAINT_VIOLATED'
+  );
+
+  // Provider Trust Class (S-04 §2 step 6) must outrank latency/cost among
+  // otherwise-tied candidates.
+  const trustCandidates: ModelCandidate[] = [
+    {
+      model_id: 'aggregator-fast-cheap',
+      provider_id: 'prv_aggregator',
+      provider_class: 'AGGREGATOR',
+      capabilities: ['TOOL_CALLING'],
+      supported_classifications: ['PUBLIC'],
+      region: ['us-central1'],
+      latency_ms: 50,
+      healthy: true,
+      cost_per_1k_tokens: 0.001,
+    },
+    {
+      model_id: 'private-slower-pricier',
+      provider_id: 'prv_private',
+      provider_class: 'PRIVATE',
+      capabilities: ['TOOL_CALLING'],
+      supported_classifications: ['PUBLIC'],
+      region: ['us-central1'],
+      latency_ms: 500,
+      healthy: true,
+      cost_per_1k_tokens: 0.05,
+    },
+  ];
+  const trustRouter = new ModelRouter(trustCandidates);
+  const trustSelected = trustRouter.selectModel({
+    required_capabilities: ['TOOL_CALLING'],
+    data_classification: 'PUBLIC',
+  });
+  assert.strictEqual(trustSelected.model_id, 'private-slower-pricier');
 });
 
 test('4. Durable Runtime Engine Execution & Checkpoint Restore', () => {

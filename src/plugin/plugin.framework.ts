@@ -19,7 +19,12 @@ export class PluginFramework {
     this.registeredPlugins.set(manifest.package, manifest);
   }
 
-  public validateEgressAccess(packageName: string, targetHost: string, targetPort: number): boolean {
+  public validateEgressAccess(
+    packageName: string,
+    targetHost: string,
+    targetPort: number,
+    targetProtocol: 'HTTP' | 'HTTPS'
+  ): boolean {
     const plugin = this.registeredPlugins.get(packageName);
     if (!plugin) {
       throw new AgexError({
@@ -31,14 +36,17 @@ export class PluginFramework {
     }
 
     const allowed = plugin.egress.some(
-      rule => (rule.host === '*' || rule.host === targetHost) && rule.port === targetPort
+      rule =>
+        (rule.host === '*' || rule.host === targetHost) &&
+        rule.port === targetPort &&
+        rule.protocol === targetProtocol
     );
 
     if (!allowed) {
       throw new AgexError({
         code: 'PLUGIN_EGRESS_DENIED',
         category: 'POLICY',
-        message: `Plugin ${packageName} denied egress access to ${targetHost}:${targetPort}.`,
+        message: `Plugin ${packageName} denied egress access to ${targetProtocol}://${targetHost}:${targetPort}.`,
         request_id: 'plg_req',
       });
     }

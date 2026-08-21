@@ -6,6 +6,7 @@ import { RuntimeReconciler } from '../src/runtime/reconciler.js';
 import { ToolInvoker } from '../src/agent/tool.invoker.js';
 import { PolicyDecisionPoint } from '../src/identity/pdp.js';
 import { AgentExecutor } from '../src/agent/agent.executor.js';
+import { MultiAgentOrchestrator } from '../src/agent/multi-agent.orchestrator.js';
 
 test('1. Task Dispatcher & Lease Acquisition', () => {
   const dispatcher = new TaskDispatcher();
@@ -61,8 +62,17 @@ test('3. Tool Invoker & Autonomy Level Safety Gate', async () => {
     (err: any) => err.code === 'AUTONOMY_LEVEL_EXCEEDED'
   );
 
-  // L2 Agent attempt -> Allowed to invoke
-  const result = await invoker.invokeTool('tool_delete_db', {}, 'L2');
+  // L2 Agent attempt WITHOUT approval -> must still be blocked (MASTER.md
+  // Rule 17: L2 and above go through an approval procedure, not a free pass)
+  await assert.rejects(
+    async () => {
+      await invoker.invokeTool('tool_delete_db', {}, 'L2');
+    },
+    (err: any) => err.code === 'APPROVAL_REQUIRED'
+  );
+
+  // L2 Agent attempt WITH explicit approval -> Allowed to invoke
+  const result = await invoker.invokeTool('tool_delete_db', {}, 'L2', true);
   assert.strictEqual(result.status, 'SUCCESS');
 });
 
@@ -93,4 +103,32 @@ test('4. Agent Executor End-to-End Execution Flow', async () => {
 
   assert.strictEqual(result.status, 'SUCCESS');
   assert.strictEqual(result.side_effect, 'READ_ONLY');
+});
+
+test('5. Multi-Agent Delegation Scope Cannot Exceed Parent Permissions', () => {
+  const orchestrator = new MultiAgentOrchestrator();
+
+  // Child requests a permission the parent never had -> excluded from the
+  // effective scope (self-elevation is impossible)
+  const scope = orchestrator.createDelegatedScope({
+    parent_agent_id: 'agt_parent',
+    child_agent_id: 'agt_child',
+    parent_permissions: ['knowledge:read', 'agent:execute'],
+    child_permissions: ['knowledge:read', 'billing:manage'],
+    delegated_scope: ['knowledge:read', 'billing:manage'],
+  });
+  assert.deepStrictEqual(scope.effective_permissions, ['knowledge:read']);
+  assert.ok(scope.delegation_id.startsWith('dlg_'));
+
+  // Empty intersection -> rejected outright
+  assert.throws(
+    () => orchestrator.createDelegatedScope({
+      parent_agent_id: 'agt_parent',
+      child_agent_id: 'agt_child',
+      parent_permissions: ['agent:execute'],
+      child_permissions: ['billing:manage'],
+      delegated_scope: ['billing:manage'],
+    }),
+    (err: any) => err.code === 'EMPTY_DELEGATED_SCOPE'
+  );
 });

@@ -28,7 +28,8 @@ export class ToolInvoker {
   public async invokeTool(
     toolId: string,
     params: Record<string, unknown>,
-    autonomyLevel: string
+    autonomyLevel: string,
+    approved: boolean = false
   ): Promise<ToolInvocationResult> {
     const tool = this.registry.get(toolId);
     if (!tool) {
@@ -40,17 +41,29 @@ export class ToolInvoker {
       });
     }
 
-    // Safety Gate: L0/L1 Agents cannot perform IRREVERSIBLE_WRITE or PRIVILEGED_ACTION without approval
-    if (
-      (autonomyLevel === 'L0' || autonomyLevel === 'L1') &&
-      (tool.side_effect === 'IRREVERSIBLE_WRITE' || tool.side_effect === 'PRIVILEGED_ACTION')
-    ) {
-      throw new AgexError({
-        code: 'AUTONOMY_LEVEL_EXCEEDED',
-        category: 'POLICY',
-        message: `Autonomy level ${autonomyLevel} cannot execute ${tool.side_effect} tool without explicit approval.`,
-        request_id: 'tool_req',
-      });
+    // Safety Gate (MASTER.md Rule 17: Autonomy는 Bounded다 — L2 이상은 승인
+    // 절차를 거친다). L0/L1 can never run IRREVERSIBLE_WRITE/PRIVILEGED_ACTION
+    // tools regardless of approval; L2+ may run them only with explicit
+    // approval (`approved`) — it is never granted implicitly by autonomy
+    // level alone.
+    if (tool.side_effect === 'IRREVERSIBLE_WRITE' || tool.side_effect === 'PRIVILEGED_ACTION') {
+      if (autonomyLevel === 'L0' || autonomyLevel === 'L1') {
+        throw new AgexError({
+          code: 'AUTONOMY_LEVEL_EXCEEDED',
+          category: 'POLICY',
+          message: `Autonomy level ${autonomyLevel} cannot execute ${tool.side_effect} tool under any circumstances.`,
+          request_id: 'tool_req',
+        });
+      }
+
+      if (!approved) {
+        throw new AgexError({
+          code: 'APPROVAL_REQUIRED',
+          category: 'POLICY',
+          message: `Autonomy level ${autonomyLevel} requires explicit approval to execute ${tool.side_effect} tool ${toolId}.`,
+          request_id: 'tool_req',
+        });
+      }
     }
 
     const startMs = Date.now();

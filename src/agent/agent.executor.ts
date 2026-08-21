@@ -23,7 +23,8 @@ export class AgentExecutor {
     tenantContext: TenantContext,
     agentConfig: AgentExecutionConfig,
     toolId: string,
-    toolParams: Record<string, unknown>
+    toolParams: Record<string, unknown>,
+    toolExecutionApproved: boolean = false
   ): Promise<ToolInvocationResult> {
     // 1. Authorize Execution Request via PDP. resource_tenant_id is
     // intentionally omitted — see the doc comment on
@@ -49,6 +50,6 @@ export class AgentExecutor {
     }
 
     // 2. Execute Tool via ToolInvoker with Autonomy Check
-    return await this.invoker.invokeTool(toolId, toolParams, agentConfig.autonomy_level);
+    return await this.invoker.invokeTool(toolId, toolParams, agentConfig.autonomy_level, toolExecutionApproved);
   }
 }

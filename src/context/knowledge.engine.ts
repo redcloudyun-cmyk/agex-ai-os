@@ -1,4 +1,4 @@
-import { generateResourceId, getCurrentISOString } from '../common/utils.js';
+import { generateResourceId } from '../common/utils.js';
 
 export type KnowledgeClassification = 'PUBLIC' | 'INTERNAL' | 'CONFIDENTIAL' | 'RESTRICTED';
 
