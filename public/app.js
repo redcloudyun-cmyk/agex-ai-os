@@ -68,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'tab-library': { id: 'view-library', display: 'block' },
         'tab-iam': { id: 'view-iam', display: 'block' },
         'tab-skills': { id: 'view-skills', display: 'block' },
+        'tab-support': { id: 'view-support', display: 'block' },
       };
 
       const target = viewMap[tabId];
@@ -106,30 +107,106 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // ─── Free-Tier House Ad Widget ───
-  // Plan tier isn't wired to real billing/entitlement data yet (Phase 10),
-  // so this reads a local mock flag: 'free' (default, ad shown) or 'pro'.
-  // Intentionally no dismiss/close control — upgrading is the only way to
-  // remove the ad, matching how the free tier is meant to monetize.
+  // ─── Free-Tier Plan State (Core) vs Paid (Prime) ───
+  // Not wired to real billing/entitlement data yet (Phase 10), so this reads
+  // a local mock flag: 'free' (default — AGEX Core) or 'pro' (AGEX Prime).
   const adWidget = document.getElementById('ad-widget-free');
   const btnAdUpgrade = document.getElementById('btn-ad-upgrade');
+  const planSummaryPro = document.getElementById('plan-summary-pro');
+  const planSummaryFree = document.getElementById('plan-summary-free');
+  const modelTierNotice = document.getElementById('billing-model-tier-notice');
+  const earnCreditsSection = document.getElementById('earn-credits-section');
+  const btnPrimeAgent = document.getElementById('btn-prime-agent');
 
   function isFreePlan() {
     return (localStorage.getItem('agex_plan') || 'free') === 'free';
   }
 
-  function refreshAdWidget() {
-    if (!adWidget) return;
-    adWidget.classList.toggle('hidden', !isFreePlan());
+  function refreshPlanUI() {
+    const free = isFreePlan();
+
+    if (adWidget) adWidget.classList.toggle('hidden', !free);
+
+    if (planSummaryPro) planSummaryPro.style.display = free ? 'none' : 'grid';
+    if (planSummaryFree) planSummaryFree.style.display = free ? 'grid' : 'none';
+    if (modelTierNotice) modelTierNotice.style.display = free ? 'flex' : 'none';
+    if (earnCreditsSection) earnCreditsSection.style.display = free ? 'block' : 'none';
   }
 
-  refreshAdWidget();
+  function upgradeToPrime() {
+    localStorage.setItem('agex_plan', 'pro');
+    refreshPlanUI();
+    showToast(i18n ? i18n.t('toast.upgraded') : 'AGEX 프라임으로 업그레이드되었습니다.');
+  }
+
+  refreshPlanUI();
 
   if (btnAdUpgrade) {
-    btnAdUpgrade.addEventListener('click', () => {
-      localStorage.setItem('agex_plan', 'pro');
-      refreshAdWidget();
-      showToast(i18n ? i18n.t('toast.upgraded') : 'AGEX Pro로 업그레이드되었습니다.');
+    btnAdUpgrade.addEventListener('click', upgradeToPrime);
+  }
+
+  // Prime Agent pill is a paid-tier feature — free accounts get a nudge
+  // toward upgrading instead of silently doing nothing.
+  if (btnPrimeAgent) {
+    btnPrimeAgent.addEventListener('click', () => {
+      if (isFreePlan()) {
+        showToast(i18n ? i18n.t('toast.superAgentLocked') : '프라임 에이전트는 AGEX 프라임 전용입니다. 코어 탭에서 업그레이드하세요.');
+      }
+    });
+  }
+
+  // ─── Free-Tier: Earn Core via Referral ───
+  const btnCopyReferral = document.getElementById('btn-copy-referral');
+  if (btnCopyReferral) {
+    btnCopyReferral.addEventListener('click', async () => {
+      const code = document.getElementById('referral-code');
+      const link = 'https://' + (code ? code.textContent : '');
+      try {
+        await navigator.clipboard.writeText(link);
+      } catch {
+        /* clipboard API unavailable — still show confirmation for the demo */
+      }
+      showToast(i18n ? i18n.t('toast.referralCopied') : '추천 링크가 복사되었습니다.');
+    });
+  }
+
+  // ─── Free-Tier: Earn Core via Rewarded Interstitial Ad ───
+  const btnWatchAd = document.getElementById('btn-watch-ad');
+  const interstitialOverlay = document.getElementById('interstitial-ad-overlay');
+  const interstitialTimer = document.getElementById('interstitial-timer');
+  const btnInterstitialClaim = document.getElementById('btn-interstitial-claim');
+  const freeCreditBalanceEl = document.getElementById('free-credit-balance');
+
+  if (btnWatchAd && interstitialOverlay && interstitialTimer && btnInterstitialClaim) {
+    let countdownHandle = null;
+
+    btnWatchAd.addEventListener('click', () => {
+      let secondsLeft = 5;
+      interstitialTimer.textContent = String(secondsLeft);
+      btnInterstitialClaim.disabled = true;
+      interstitialOverlay.style.display = 'flex';
+
+      countdownHandle = setInterval(() => {
+        secondsLeft -= 1;
+        if (secondsLeft <= 0) {
+          clearInterval(countdownHandle);
+          interstitialTimer.textContent = '✓';
+          btnInterstitialClaim.disabled = false;
+        } else {
+          interstitialTimer.textContent = String(secondsLeft);
+        }
+      }, 1000);
+    });
+
+    btnInterstitialClaim.addEventListener('click', () => {
+      if (btnInterstitialClaim.disabled) return;
+      interstitialOverlay.style.display = 'none';
+
+      if (freeCreditBalanceEl) {
+        const current = parseInt(freeCreditBalanceEl.textContent, 10) || 0;
+        freeCreditBalanceEl.textContent = String(Math.min(current + 100, 500));
+      }
+      showToast(i18n ? i18n.t('toast.creditsEarned') : '코어 100개를 받았습니다!');
     });
   }
 
@@ -285,6 +362,77 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
   }
+
+  // ─── AI Customer Support Chat ───
+  const supportMessages = document.getElementById('support-chat-messages');
+  const supportInput = document.getElementById('support-chat-input');
+  const btnSupportSend = document.getElementById('btn-support-send');
+  const supportChips = document.querySelectorAll('.support-chip');
+
+  function appendChatMessage(role, text) {
+    if (!supportMessages) return;
+    const row = document.createElement('div');
+    row.className = 'chat-message ' + role;
+
+    const avatar = document.createElement('div');
+    avatar.className = 'chat-avatar ' + (role === 'ai' ? 'ai-avatar' : 'user-avatar');
+    avatar.textContent = role === 'ai' ? 'AI' : '나';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble';
+    bubble.textContent = text;
+
+    row.appendChild(avatar);
+    row.appendChild(bubble);
+    supportMessages.appendChild(row);
+    supportMessages.scrollTop = supportMessages.scrollHeight;
+    return row;
+  }
+
+  function showTypingIndicator() {
+    const row = appendChatMessage('ai', '');
+    if (!row) return null;
+    const bubble = row.querySelector('.chat-bubble');
+    bubble.innerHTML = '<span class="chat-typing-dots"><span></span><span></span><span></span></span>';
+    return row;
+  }
+
+  function answerFor(userText) {
+    const q = userText.toLowerCase();
+    const key = () => {
+      if (q.includes('코어') || q.includes('크레딧') || q.includes('core') || q.includes('credit') || q.includes('초기화') || q.includes('reset')) return 'support.answerCredits';
+      if (q.includes('프라임') || q.includes('업그레이드') || q.includes('prime') || q.includes('upgrade')) return 'support.answerUpgrade';
+      if (q.includes('테넌트') || q.includes('tenant')) return 'support.answerTenant';
+      if (q.includes('담당자') || q.includes('사람') || q.includes('상담원') || q.includes('human') || q.includes('person') || q.includes('talk')) return 'support.answerHuman';
+      return 'support.answerDefault';
+    };
+    return i18n ? i18n.t(key()) : '문의 감사합니다. 담당 팀에게 전달했어요.';
+  }
+
+  function sendSupportMessage(text) {
+    const trimmed = (text || '').trim();
+    if (!trimmed || !supportMessages) return;
+
+    appendChatMessage('user', trimmed);
+    if (supportInput) supportInput.value = '';
+
+    const typingRow = showTypingIndicator();
+    setTimeout(() => {
+      if (typingRow) typingRow.remove();
+      appendChatMessage('ai', answerFor(trimmed));
+    }, 700);
+  }
+
+  if (btnSupportSend && supportInput) {
+    btnSupportSend.addEventListener('click', () => sendSupportMessage(supportInput.value));
+    supportInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendSupportMessage(supportInput.value);
+    });
+  }
+
+  supportChips.forEach((chip) => {
+    chip.addEventListener('click', () => sendSupportMessage(chip.textContent));
+  });
 
   // ─── Toast Notification System ───
   let currentToast = null;
