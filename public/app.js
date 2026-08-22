@@ -4,7 +4,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const btnRun = document.getElementById('btn-run-task');
   const promptInput = document.getElementById('prompt-input');
-  let executionCount = 14;
 
   // ─── Language Toggle ───
   const btnLangToggle = document.getElementById('btn-lang-toggle');
@@ -42,10 +41,24 @@ document.addEventListener('DOMContentLoaded', () => {
   if (formatChipGroup) {
     formatChipGroup.querySelectorAll('.format-chip').forEach((chip) => {
       chip.addEventListener('click', () => {
-        formatChipGroup.querySelectorAll('.format-chip').forEach((c) => c.classList.remove('active'));
+        formatChipGroup.querySelectorAll('.format-chip').forEach((c) => {
+          c.classList.remove('active');
+          c.setAttribute('aria-pressed', 'false');
+        });
         chip.classList.add('active');
+        chip.setAttribute('aria-pressed', 'true');
         selectedOutputFormat = chip.getAttribute('data-format');
       });
+    });
+  }
+
+  function resetOutputFormat() {
+    if (!formatChipGroup) return;
+    selectedOutputFormat = 'chat';
+    formatChipGroup.querySelectorAll('.format-chip').forEach((c) => {
+      const isChat = c.getAttribute('data-format') === 'chat';
+      c.classList.toggle('active', isChat);
+      c.setAttribute('aria-pressed', String(isChat));
     });
   }
 
@@ -71,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (workspaceNav) workspaceNav.click();
       promptInput.value = '';
       promptInput.focus();
+      resetOutputFormat();
     });
   }
 
@@ -143,9 +157,30 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ─── Recent Project History Items ───
-  document.querySelectorAll('.history-item').forEach((item) => {
-    item.addEventListener('click', () => {
+  // ─── Skill / Data Source "Add" Toggle Buttons ───
+  document.querySelectorAll('.card-add-btn:not(.added)').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      btn.classList.add('added');
+      btn.disabled = true;
+      btn.innerHTML = '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>';
+      const card = btn.closest('.agent-card');
+      const name = card ? card.querySelector('.agent-name')?.textContent : '';
+      showToast(i18n ? i18n.t('toast.skillAdded').replace('{name}', name) : `${name} 추가됨`);
+    });
+  });
+
+  // ─── Custom Data Source Card (no generic connector builder yet) ───
+  const btnDatasourceCustom = document.getElementById('btn-datasource-custom');
+  if (btnDatasourceCustom) {
+    btnDatasourceCustom.addEventListener('click', () => {
+      showToast(i18n ? i18n.t('toast.comingSoon') : '준비 중인 기능입니다.');
+    });
+  }
+
+  // ─── Recent History Items & Nested Project Chats ───
+  document.querySelectorAll('.history-item, .project-chat-item').forEach((item) => {
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
       const workspaceNav = document.querySelector('[data-tab="tab-workspace"]');
       if (workspaceNav) workspaceNav.click();
       const title = item.textContent.trim();
@@ -155,8 +190,62 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // ─── Projects: expand/collapse + create new ───
+  const projectList = document.getElementById('project-list');
+  if (projectList) {
+    projectList.querySelectorAll('.project-item-row').forEach((row) => {
+      row.addEventListener('click', () => {
+        row.closest('.project-item').classList.toggle('expanded');
+      });
+    });
+  }
+
+  const btnNewProject = document.getElementById('btn-new-project');
+  if (btnNewProject && projectList) {
+    btnNewProject.addEventListener('click', () => {
+      const li = document.createElement('li');
+      li.className = 'project-item expanded';
+      li.innerHTML = `
+        <div class="project-item-row">
+          <svg class="svg-icon project-chevron" viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+          <svg class="svg-icon" viewBox="0 0 24 24" style="width:14px;height:14px;color:var(--text-light); flex-shrink:0;"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+        </div>
+        <ul class="project-chat-list"></ul>
+      `;
+      const row = li.querySelector('.project-item-row');
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'project-name-input';
+      input.placeholder = i18n ? i18n.t('nav.newProjectPlaceholder') : '프로젝트 이름';
+      row.appendChild(input);
+      projectList.insertBefore(li, projectList.firstChild);
+      input.focus();
+
+      const commit = () => {
+        const name = input.value.trim();
+        if (!name) {
+          li.remove();
+          return;
+        }
+        const span = document.createElement('span');
+        span.className = 'project-item-name';
+        span.textContent = name;
+        input.replaceWith(span);
+        row.addEventListener('click', () => li.classList.toggle('expanded'));
+        showToast(i18n ? i18n.t('toast.projectCreated').replace('{name}', name) : `'${name}' 프로젝트를 만들었습니다.`);
+      };
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') input.blur();
+        if (e.key === 'Escape') { input.value = ''; input.blur(); }
+      });
+      input.addEventListener('blur', commit);
+      input.addEventListener('click', (e) => e.stopPropagation());
+    });
+  }
+
   // ─── Sidebar Navigation & Tab Switching ───
-  const navItems = document.querySelectorAll('.nav-item, .popover-item[data-tab]');
+  const navItems = document.querySelectorAll('.nav-item, .popover-item[data-tab], .project-item-row[data-tab]');
   navItems.forEach(item => {
     item.addEventListener('click', () => {
       document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
@@ -178,6 +267,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'tab-library': { id: 'view-library', display: 'block' },
         'tab-iam': { id: 'view-iam', display: 'block' },
         'tab-skills': { id: 'view-skills', display: 'block' },
+        'tab-datasources': { id: 'view-datasources', display: 'block' },
+        'tab-vcs': { id: 'view-vcs', display: 'block' },
         'tab-support': { id: 'view-support', display: 'block' },
       };
 
@@ -196,12 +287,41 @@ document.addEventListener('DOMContentLoaded', () => {
         activate(document.getElementById('view-workspace'), 'flex');
       }
 
+      if (tabId === 'tab-vcs') loadVcsStatus();
+
       if (manusPopover) manusPopover.style.display = 'none';
 
       // 모바일: 탭 전환 후 사이드바 닫기
       closeMobileSidebar();
     });
   });
+
+  // ─── Plugin Marketplace Search ───
+  const pluginSearchInput = document.getElementById('plugin-search-input');
+  const pluginSearchEmpty = document.getElementById('plugin-search-empty');
+  if (pluginSearchInput) {
+    pluginSearchInput.addEventListener('input', () => {
+      const query = pluginSearchInput.value.trim().toLowerCase();
+      let anyVisible = false;
+
+      document.querySelectorAll('.plugin-category').forEach((category) => {
+        const categoryName = category.querySelector('.plugin-category-heading')?.textContent.toLowerCase() || '';
+        const categoryNameMatches = !query || categoryName.includes(query);
+        let categoryHasMatch = false;
+        category.querySelectorAll('.connector-row').forEach((row) => {
+          const title = row.querySelector('.connector-title')?.textContent.toLowerCase() || '';
+          const desc = row.querySelector('.connector-desc')?.textContent.toLowerCase() || '';
+          const matches = categoryNameMatches || title.includes(query) || desc.includes(query);
+          row.style.display = matches ? 'flex' : 'none';
+          if (matches) categoryHasMatch = true;
+        });
+        category.style.display = categoryHasMatch ? 'block' : 'none';
+        if (categoryHasMatch) anyVisible = true;
+      });
+
+      if (pluginSearchEmpty) pluginSearchEmpty.style.display = anyVisible ? 'none' : 'block';
+    });
+  }
 
   // ─── Plugin Connector Buttons ───
   document.querySelectorAll('.btn-connect').forEach(btn => {
@@ -227,6 +347,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const modelTierNotice = document.getElementById('billing-model-tier-notice');
   const earnCreditsSection = document.getElementById('earn-credits-section');
   const btnPrimeAgent = document.getElementById('btn-prime-agent');
+  const proBadgePrime = document.getElementById('pro-badge-prime');
+  const proBadgeFree = document.getElementById('pro-badge-free');
 
   function isFreePlan() {
     return (localStorage.getItem('agex_plan') || 'free') === 'free';
@@ -241,6 +363,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (planSummaryFree) planSummaryFree.style.display = free ? 'grid' : 'none';
     if (modelTierNotice) modelTierNotice.style.display = free ? 'flex' : 'none';
     if (earnCreditsSection) earnCreditsSection.style.display = free ? 'block' : 'none';
+    if (proBadgePrime) proBadgePrime.style.display = free ? 'none' : 'inline';
+    if (proBadgeFree) proBadgeFree.style.display = free ? 'inline' : 'none';
   }
 
   function upgradeToPrime() {
@@ -262,6 +386,15 @@ document.addEventListener('DOMContentLoaded', () => {
       if (isFreePlan()) {
         showToast(i18n ? i18n.t('toast.superAgentLocked') : '프라임 에이전트는 AGEX 프라임 전용입니다. 코어 탭에서 업그레이드하세요.');
       }
+    });
+  }
+
+  // ─── "코어 충전" (Top Up Core) — routes to the Billing tab ───
+  const btnChargeCore = document.getElementById('btn-charge-core');
+  if (btnChargeCore) {
+    btnChargeCore.addEventListener('click', () => {
+      const billingNav = document.querySelector('[data-tab="tab-billing"]');
+      if (billingNav) billingNav.click();
     });
   }
 
@@ -486,7 +619,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const avatar = document.createElement('div');
     avatar.className = 'chat-avatar ' + (role === 'ai' ? 'ai-avatar' : 'user-avatar');
-    avatar.textContent = role === 'ai' ? 'AI' : '나';
+    avatar.textContent = role === 'ai' ? 'AI' : (i18n ? i18n.t('support.you') : '나');
 
     const bubble = document.createElement('div');
     bubble.className = 'chat-bubble';
@@ -577,6 +710,94 @@ document.addEventListener('DOMContentLoaded', () => {
     if (currentToast) {
       currentToast.remove();
       currentToast = null;
+    }
+  }
+
+  // ─── Version Control (Git) — read-only live status from /api/v1/vcs/status ───
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : String(str);
+    return div.innerHTML;
+  }
+
+  function vcsStatusLetter(code) {
+    if (code === '??') return 'U';
+    if (code.includes('D')) return 'D';
+    if (code.includes('A')) return 'A';
+    if (code.includes('R')) return 'R';
+    return 'M';
+  }
+
+  function vcsStatusClass(letter) {
+    return 'vcs-status-' + letter.toLowerCase();
+  }
+
+  async function loadVcsStatus() {
+    const loadingEl = document.getElementById('vcs-loading');
+    const contentEl = document.getElementById('vcs-content');
+    const errorEl = document.getElementById('vcs-error');
+    if (!loadingEl || !contentEl || !errorEl) return;
+
+    loadingEl.style.display = 'block';
+    contentEl.style.display = 'none';
+    errorEl.style.display = 'none';
+
+    try {
+      const res = await fetch('/api/v1/vcs/status');
+      const data = await res.json();
+      if (!data.available) throw new Error(data.error || 'unavailable');
+
+      const branchNameEl = document.getElementById('vcs-branch-name');
+      if (branchNameEl) branchNameEl.textContent = data.branch || '—';
+
+      const filesEl = document.getElementById('vcs-changed-files');
+      const noChangesEl = document.getElementById('vcs-no-changes');
+      if (filesEl && noChangesEl) {
+        filesEl.innerHTML = '';
+        if (data.changed_files.length === 0) {
+          noChangesEl.style.display = 'block';
+        } else {
+          noChangesEl.style.display = 'none';
+          data.changed_files.forEach((f) => {
+            const letter = vcsStatusLetter(f.status);
+            const row = document.createElement('div');
+            row.className = 'vcs-file-row';
+            row.innerHTML = `
+              <span class="vcs-file-status ${vcsStatusClass(letter)}">${letter}</span>
+              <span class="vcs-file-path">${escapeHtml(f.path)}</span>
+            `;
+            filesEl.appendChild(row);
+          });
+        }
+      }
+
+      const commitsEl = document.getElementById('vcs-commits');
+      if (commitsEl) {
+        commitsEl.innerHTML = '';
+        const locale = i18n && i18n.getLocale && i18n.getLocale() === 'en' ? 'en-US' : 'ko-KR';
+        data.commits.forEach((c) => {
+          const row = document.createElement('div');
+          row.className = 'vcs-commit-row';
+          const dateStr = c.date ? new Date(c.date).toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+          row.innerHTML = `
+            <div class="vcs-commit-dot-col"><span class="vcs-commit-dot"></span></div>
+            <div class="vcs-commit-body">
+              <div class="vcs-commit-message">${escapeHtml(c.message)}</div>
+              <div class="vcs-commit-meta">
+                <span class="vcs-commit-hash">${escapeHtml(c.hash)}</span>
+                <span>${escapeHtml(c.author)} · ${escapeHtml(dateStr)}</span>
+              </div>
+            </div>
+          `;
+          commitsEl.appendChild(row);
+        });
+      }
+
+      loadingEl.style.display = 'none';
+      contentEl.style.display = 'block';
+    } catch (err) {
+      loadingEl.style.display = 'none';
+      errorEl.style.display = 'block';
     }
   }
 });

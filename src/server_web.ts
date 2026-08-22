@@ -1,6 +1,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 
 // ─── AGEX Core Engine Imports ───
 import { PolicyDecisionPoint, describeDeniedDecision } from './identity/pdp.js';
@@ -147,6 +148,74 @@ const billingState = {
   used_credits: 1550,
   next_renewal: '2026-09-01',
 };
+
+interface VcsFileChange {
+  path: string;
+  status: string;
+}
+
+interface VcsCommit {
+  hash: string;
+  author: string;
+  date: string;
+  message: string;
+}
+
+interface VcsStatus {
+  available: boolean;
+  branch: string | null;
+  changed_files: VcsFileChange[];
+  commits: VcsCommit[];
+  error?: string;
+}
+
+// Read-only git introspection for the console's Version Control view.
+// Every call below is a fixed argument array (no string interpolation, no
+// request input reaches these calls) and is limited to status/log — this
+// must never grow write operations (commit/push/reset) without a fresh
+// authorization review, since it would let a web request mutate the repo.
+function getVcsStatus(): VcsStatus {
+  const cwd = process.cwd();
+  try {
+    const branch = execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd, encoding: 'utf8' }).trim();
+
+    const statusRaw = execFileSync(
+      'git',
+      ['-c', 'core.quotepath=false', 'status', '--porcelain=v1'],
+      { cwd, encoding: 'utf8' }
+    );
+    const changed_files: VcsFileChange[] = statusRaw
+      .split('\n')
+      .filter((line) => line.trim().length > 0)
+      .map((line) => ({
+        status: line.slice(0, 2).trim() || '?',
+        path: line.slice(3),
+      }));
+
+    const logRaw = execFileSync(
+      'git',
+      ['log', '-20', '--pretty=format:%h%x1f%an%x1f%ad%x1f%s', '--date=iso-strict'],
+      { cwd, encoding: 'utf8' }
+    );
+    const commits: VcsCommit[] = logRaw
+      .split('\n')
+      .filter((line) => line.trim().length > 0)
+      .map((line) => {
+        const [hash, author, date, message] = line.split('\x1f');
+        return { hash, author, date, message };
+      });
+
+    return { available: true, branch, changed_files, commits };
+  } catch (err) {
+    return {
+      available: false,
+      branch: null,
+      changed_files: [],
+      commits: [],
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
 
 // ─── API Router ───
 // exported for direct unit testing (see tests/) without spinning up http.createServer
@@ -295,6 +364,12 @@ export function handleApiRequest(
   // ─── GET /api/v1/executions ───
   if (pathname === '/api/v1/executions' && method === 'GET') {
     return { status: 200, data: { executions: executionHistory, total: executionHistory.length } };
+  }
+
+  // ─── GET /api/v1/vcs/status ───
+  // Read-only: current branch, working-tree changes, recent commit log.
+  if (pathname === '/api/v1/vcs/status' && method === 'GET') {
+    return { status: 200, data: getVcsStatus() };
   }
 
   return { status: 404, data: { error: 'ENDPOINT_NOT_FOUND', message: `${method} ${pathname}` } };

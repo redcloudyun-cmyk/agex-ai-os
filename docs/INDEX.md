@@ -15,55 +15,29 @@ AGEX 프로젝트의 전체 문서 체계 및 도메인별 필독 사양 색인�
 
 ## 2. 문서 카테고리별 분류
 
+아래 목록은 **실제로 `docs/` 아래 존재하는 파일만** 표시합니다. 각 카테고리 이름(LEVEL 1~6)은
+MASTER.md의 12-phase 로드맵이 궁극적으로 채울 것으로 예정된 문서 체계이지만, 대부분은
+아직 작성되지 않았습니다 — 존재하지 않는 파일을 여기 나열해 "필독 문서"처럼 보이게
+만들지 않도록 의도적으로 뺐습니다. 해당 도메인에 대한 명세가 아래에 없다면, `MASTER.md`
+(LEVEL 0 SSOT)와 `specs/schemas/`, `specs/permissions/`, 그리고 기존 구현 코드를
+근거로 작업하고, CLAUDE.md의 Specification Gap Behavior에 따라 누락을 명시적으로
+보고하세요 — 임의로 명세를 지어내지 마세요.
+
 ### 🏛 LEVEL 1: Product Constitution (`docs/constitution/`)
 - `01-product-vision.md` — AGEX 비전 및 핵심 가치
-- `02-product-philosophy.md` — 제품 철학 및 설계 원칙
 
-### 📐 LEVEL 2: System Architecture (`docs/architecture/`)
-- `03-product-architecture.md` — 전체 시스템 아키텍처
-- `04-core-architecture.md` — 핵심 코어 구조 명세
-- `05-runtime-architecture.md` — Runtime 엔진 구조 명세
-- `14-security-architecture.md` — Zero-Trust 보안 아키텍처
-- `15-multi-tenant-architecture.md` — 멀티테넌트 격리 아키텍처
-- `16-deployment-architecture.md` — 배포 및 인프라 구조
-- `17-governance.md` — 거버넌스 및 리스크 통제 정책
+### 🧩 LEVEL 3: Domain & Supplemental Specifications (`docs/supplemental/`)
+- `S-04-model-gateway.md` — Model Gateway & Router Architecture
+- `S-05-iam.md` — Identity & Access Management (IAM) 명세
+- `S-06-billing-entitlement.md` — Billing & Entitlement Architecture
 
-### 🧩 LEVEL 3: Domain & Supplemental Specifications (`docs/domains/` & `docs/supplemental/`)
-- **Domains**:
-  - `06-agent-framework.md` — 에이전트 프레임워크 명세
-  - `07-workflow-engine.md` — 워크플로우 오케스트레이션 엔진
-  - `08-knowledge-engine.md` — Knowledge Engine 명세
-  - `09-memory-engine.md` — Memory Engine 명세
-  - `10-plugin-framework.md` — 플러그인 확장 프레임워크
-  - `11-marketplace.md` — 마켓플레이스 명세
-  - `12-sdk.md` — AGEX SDK 사양 명세
-  - `13-api-specification.md` — AGEX API 표준 명세
-- **Supplemental Core Specifications**:
-  - `S-01-master-spec.md` — AGEX Master Specification (LEVEL 0)
-  - `S-02-canonical-glossary.md` — Canonical Glossary
-  - `S-03-canonical-resource-schema.md` — 표준 Resource & Schema 명세
-  - `S-04-model-gateway.md` — Model Gateway & Router Architecture
-  - `S-05-iam.md` — Identity & Access Management (IAM) 명세
-  - `S-06-billing-entitlement.md` — Billing & Entitlement Architecture
-
-### 📊 LEVEL 4: Execution Planning (`docs/planning/`)
-- `18-product-roadmap.md` — 제품 로드맵
-- `19-development-roadmap.md` — 개발 단계별 로드맵
-- `20-wbs.md` — 작업 분할 구조도 (WBS)
-- `21-development-plan.md` — 개발 실행 계획
-- `22-resource-plan.md` — 인력 및 자원 계획
-- `23-cost-estimation.md` — 비용 추정 및 예산
-
-### 💼 LEVEL 5: Commercial (`docs/business/`)
-- `24-business-model.md` — 비즈니스 및 수익 모델
-
-### 📚 LEVEL 6: Explanatory & Usage Guides (`docs/guides/`)
-- `25-technical-white-paper.md` — 기술 백서
-- `26-product-documentation.md` — 제품 설명서
-- `27-operations-guide.md` — 운영 및 매뉴얼 가이드
-- `28-api-guide.md` — API 사용 가이드
-- `29-administrator-guide.md` — 관리자 가이드
-- `30-developer-guide.md` — 개발자 가이드
+### 미작성 (Not yet written)
+다음 카테고리는 MASTER.md 로드맵상 존재할 예정이지만 아직 문서가 작성되지 않았습니다:
+LEVEL 2 System Architecture (`docs/architecture/`), 나머지 LEVEL 3 Domain 문서
+(`docs/domains/` — agent-framework, workflow-engine, knowledge-engine, memory-engine,
+plugin-framework, marketplace, sdk, api-specification), LEVEL 3의 `S-01`~`S-03`,
+LEVEL 4 Execution Planning (`docs/planning/`), LEVEL 5 Commercial (`docs/business/`),
+LEVEL 6 Guides (`docs/guides/`). 작성이 필요해지면 이 섹션에서 옮겨 실제 항목으로 추가하세요.
 
 ---
 
@@ -71,8 +45,7 @@ AGEX 프로젝트의 전체 문서 체계 및 도메인별 필독 사양 색인�
 
 | 작업 영역 | 필독 권장 문서 목록 |
 |---|---|
-| **에이전트 구현** | `06-agent-framework.md`, `S-03-canonical-resource-schema.md`, `09-memory-engine.md` |
-| **Runtime / Worker 구현** | `05-runtime-architecture.md`, `07-workflow-engine.md`, `S-03-canonical-resource-schema.md` |
-| **Model 연동 / 라우팅** | `S-04-model-gateway.md`, `13-api-specification.md` |
-| **보안 / IAM / 권한** | `14-security-architecture.md`, `15-multi-tenant-architecture.md`, `S-05-iam.md` |
-| **플러그인 / 마켓플레이스** | `10-plugin-framework.md`, `11-marketplace.md`, `S-06-billing-entitlement.md` |
+| **Model 연동 / 라우팅** | `S-04-model-gateway.md` |
+| **보안 / IAM / 권한** | `S-05-iam.md`, `MASTER.md` |
+| **Billing / Entitlement** | `S-06-billing-entitlement.md` |
+| **그 외 모든 도메인** (에이전트, Runtime, 워크플로우, 플러그인 등) | 전용 도메인 문서가 아직 없으므로 `MASTER.md` + `specs/` + 기존 코드를 근거로 작업하고, 명세 갭을 명시적으로 보고 |
