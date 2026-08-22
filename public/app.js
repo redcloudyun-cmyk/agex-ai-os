@@ -45,6 +45,63 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // ─── New Task Button (sidebar) ───
+  const btnSidebarNew = document.getElementById('btn-sidebar-new');
+  if (btnSidebarNew && promptInput) {
+    btnSidebarNew.addEventListener('click', () => {
+      const workspaceNav = document.querySelector('[data-tab="tab-workspace"]');
+      if (workspaceNav) workspaceNav.click();
+      promptInput.value = '';
+      promptInput.focus();
+    });
+  }
+
+  // ─── Attach File Button ───
+  const btnAttach = document.getElementById('btn-attach');
+  if (btnAttach) {
+    const hiddenFileInput = document.createElement('input');
+    hiddenFileInput.type = 'file';
+    hiddenFileInput.style.display = 'none';
+    document.body.appendChild(hiddenFileInput);
+
+    btnAttach.addEventListener('click', () => hiddenFileInput.click());
+    hiddenFileInput.addEventListener('change', () => {
+      const file = hiddenFileInput.files && hiddenFileInput.files[0];
+      if (!file) return;
+      const template = i18n ? i18n.t('toast.fileAttached') : '{name} 파일이 첨부되었습니다.';
+      showToast(template.replace('{name}', file.name));
+      hiddenFileInput.value = '';
+    });
+  }
+
+  // ─── System Settings (popover item, no dedicated page yet) ───
+  const popSystemSettings = document.getElementById('pop-system-settings');
+  if (popSystemSettings) {
+    popSystemSettings.addEventListener('click', () => {
+      showToast(i18n ? i18n.t('toast.comingSoon') : '준비 중인 기능입니다.');
+    });
+  }
+
+  // ─── Feature Banner CTA ───
+  const btnBanner = document.querySelector('.btn-banner');
+  if (btnBanner) {
+    btnBanner.addEventListener('click', () => {
+      showToast(i18n ? i18n.t('toast.comingSoon') : '준비 중인 기능입니다.');
+    });
+  }
+
+  // ─── Recent Project History Items ───
+  document.querySelectorAll('.history-item').forEach((item) => {
+    item.addEventListener('click', () => {
+      const workspaceNav = document.querySelector('[data-tab="tab-workspace"]');
+      if (workspaceNav) workspaceNav.click();
+      const title = item.textContent.trim();
+      if (promptInput) promptInput.value = title;
+      const template = i18n ? i18n.t('toast.taskLoaded') : "'{title}' 작업을 불러왔습니다.";
+      showToast(template.replace('{title}', title));
+    });
+  });
+
   // ─── Sidebar Navigation & Tab Switching ───
   const navItems = document.querySelectorAll('.nav-item, .popover-item[data-tab]');
   navItems.forEach(item => {

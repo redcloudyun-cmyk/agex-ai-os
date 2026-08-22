@@ -158,6 +158,9 @@
       'toast.ttsUnsupported': '이 브라우저는 음성 출력을 지원하지 않습니다.',
       'toast.defaultSpeak': 'AGEX AI 워크스페이스에 오신 것을 환영합니다. 원하시는 작업을 말씀해 주세요.',
       'toast.connectDone': '연동 완료',
+      'toast.fileAttached': '{name} 파일이 첨부되었습니다.',
+      'toast.comingSoon': '준비 중인 기능입니다.',
+      'toast.taskLoaded': "'{title}' 작업을 불러왔습니다.",
 
       'support.heading': 'AI 고객센터',
       'support.desc': 'AI 상담원이 24시간 실시간으로 답변합니다. 복잡한 문의는 담당 팀으로 자동 연결돼요.',
@@ -331,6 +334,9 @@
       'toast.ttsUnsupported': "This browser doesn't support voice output.",
       'toast.defaultSpeak': "Welcome to the AGEX AI Workspace. Tell me what you'd like to do.",
       'toast.connectDone': 'connected',
+      'toast.fileAttached': '{name} attached.',
+      'toast.comingSoon': 'Coming soon.',
+      'toast.taskLoaded': "Loaded '{title}'.",
 
       'support.heading': 'AI Customer Center',
       'support.desc': 'Our AI support agent answers around the clock. Complex requests are automatically routed to the right team.',
