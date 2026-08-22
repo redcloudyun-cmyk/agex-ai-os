@@ -1,5 +1,6 @@
 import type { TenantContext, PrincipalReference } from '../common/types.js';
 import type { PolicyDecisionPoint } from '../identity/pdp.js';
+import { describeDeniedDecision } from '../identity/pdp.js';
 import type { ToolInvoker, ToolInvocationResult } from './tool.invoker.js';
 import { AgexError } from '../common/errors.js';
 
@@ -40,9 +41,10 @@ export class AgentExecutor {
     });
 
     if (authDecision.decision !== 'ALLOW') {
+      const outcome = describeDeniedDecision(authDecision);
       const requiresApproval = authDecision.decision === 'CONDITIONAL';
       throw new AgexError({
-        code: requiresApproval ? 'APPROVAL_REQUIRED' : 'EXECUTION_DENIED',
+        code: outcome.errorCode,
         category: requiresApproval ? 'POLICY' : 'AUTHORIZATION',
         message: `Agent execution ${requiresApproval ? 'requires approval' : 'denied'} by PDP: ${authDecision.reason_code}`,
         request_id: 'exe_req',

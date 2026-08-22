@@ -8,7 +8,7 @@ export interface AuditEventRecord {
   tenant_id: string;
   action: string;
   resource: { type: string; id: string };
-  result: 'SUCCESS' | 'DENIED' | 'FAILED';
+  result: 'SUCCESS' | 'DENIED' | 'PENDING_APPROVAL' | 'FAILED';
   reason_code?: string;
   request_id: string;
   correlation_id?: string;

@@ -1,6 +1,6 @@
 import type { TenantContext, PrincipalReference } from './common/types.js';
 import { AgexError } from './common/errors.js';
-import { PolicyDecisionPoint } from './identity/pdp.js';
+import { PolicyDecisionPoint, describeDeniedDecision } from './identity/pdp.js';
 import { DurableRuntimeEngine } from './runtime/runtime.engine.js';
 import { AuditLogger } from './governance/audit.logger.js';
 import { BillingLedgerEngine } from './billing/billing.ledger.js';
@@ -85,19 +85,20 @@ export class AgexPlatformApiServer {
         });
 
         if (decision.decision !== 'ALLOW') {
+          const outcome = describeDeniedDecision(decision);
           this.auditLogger.logEvent({
             actor: principal,
             tenant_id: tenantContext.tenant_id,
             action: 'agent:execute',
             resource: { type: 'Agent', id: targetId },
-            result: 'DENIED',
+            result: outcome.auditResult,
             reason_code: decision.reason_code,
             request_id: requestId,
           });
 
           const requiresApproval = decision.decision === 'CONDITIONAL';
           throw new AgexError({
-            code: requiresApproval ? 'APPROVAL_REQUIRED' : 'PERMISSION_DENIED',
+            code: outcome.errorCode,
             category: requiresApproval ? 'POLICY' : 'AUTHORIZATION',
             message: `Execution ${requiresApproval ? 'requires approval' : 'denied'}: ${decision.reason_code}`,
             request_id: requestId,
@@ -143,8 +144,12 @@ export class AgexPlatformApiServer {
   private mapCategoryToHttpStatus(category: string): number {
     switch (category) {
       case 'AUTHENTICATION': return 401;
-      case 'AUTHORIZATION':
-      case 'POLICY': return 403;
+      case 'AUTHORIZATION': return 403;
+      // POLICY is only ever used for the CONDITIONAL/APPROVAL_REQUIRED path
+      // (see the /executions handler above) — collapsing it into the same
+      // 403 as AUTHORIZATION made "denied" and "pending approval" look
+      // identical to API callers.
+      case 'POLICY': return 202;
       case 'NOT_FOUND': return 404;
       case 'CONFLICT': return 409;
       case 'VALIDATION': return 422;

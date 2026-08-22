@@ -83,3 +83,23 @@ export class PolicyDecisionPoint {
     };
   }
 }
+
+export interface DecisionOutcome {
+  httpStatus: number;
+  errorCode: 'PERMISSION_DENIED' | 'APPROVAL_REQUIRED';
+  auditResult: 'DENIED' | 'PENDING_APPROVAL';
+}
+
+/**
+ * Translates a non-ALLOW PDP decision into the HTTP status, public error
+ * code, and audit-log result every call site (server.ts, server_web.ts,
+ * agent.executor.ts) should use. Centralized so CONDITIONAL (which means
+ * "pending approval", not "denied") can't silently drift back to being
+ * treated identically to DENY at some call sites but not others.
+ */
+export function describeDeniedDecision(decision: AuthorizationDecision): DecisionOutcome {
+  if (decision.decision === 'CONDITIONAL') {
+    return { httpStatus: 202, errorCode: 'APPROVAL_REQUIRED', auditResult: 'PENDING_APPROVAL' };
+  }
+  return { httpStatus: 403, errorCode: 'PERMISSION_DENIED', auditResult: 'DENIED' };
+}

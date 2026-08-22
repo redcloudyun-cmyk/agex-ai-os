@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 // ─── AGEX Core Engine Imports ───
-import { PolicyDecisionPoint } from './identity/pdp.js';
+import { PolicyDecisionPoint, describeDeniedDecision } from './identity/pdp.js';
 import { DurableRuntimeEngine } from './runtime/runtime.engine.js';
 import { AuditLogger } from './governance/audit.logger.js';
 import { BillingLedgerEngine } from './billing/billing.ledger.js';
@@ -149,14 +149,24 @@ const billingState = {
 };
 
 // ─── API Router ───
-function handleApiRequest(
+// exported for direct unit testing (see tests/) without spinning up http.createServer
+export function handleApiRequest(
   method: string,
   pathname: string,
-  body: Record<string, unknown> | null
+  body: Record<string, unknown> | null,
+  headers: Record<string, string | string[] | undefined> = {}
 ): { status: number; data: unknown } {
-  const tenantId = 'ten_production_01';
+  // This demo console has no real login flow yet, so requests default to a
+  // seed tenant/principal; a caller can override via X-AGEX-Tenant /
+  // X-Principal-Id (mirrors the header contract server.ts already enforces).
+  const headerTenant = headers['x-agex-tenant'];
+  const headerPrincipal = headers['x-principal-id'];
+  const tenantId = (Array.isArray(headerTenant) ? headerTenant[0] : headerTenant) || 'ten_production_01';
   const tenantContext: TenantContext = { tenant_id: tenantId, scope_type: 'TENANT' };
-  const principal: PrincipalReference = { type: 'user', id: 'usr_admin_001' };
+  const principal: PrincipalReference = {
+    type: 'user',
+    id: (Array.isArray(headerPrincipal) ? headerPrincipal[0] : headerPrincipal) || 'usr_admin_001',
+  };
 
   // ─── GET /api/v1/health ───
   if (pathname === '/api/v1/health' && method === 'GET') {
@@ -178,6 +188,8 @@ function handleApiRequest(
   if (pathname === '/api/v1/executions' && method === 'POST') {
     const taskObjective = (body?.objective as string) || 'Unnamed task';
     const agentId = (body?.agent_id as string) || 'agt_market_analyst';
+    const headerRequestId = headers['x-request-id'];
+    const requestId = (Array.isArray(headerRequestId) ? headerRequestId[0] : headerRequestId) || `req_${Date.now()}`;
 
     // PDP authorization check. resource_tenant_id is intentionally omitted —
     // see the doc comment on AuthorizationRequest.resource_tenant_id; this
@@ -192,17 +204,28 @@ function handleApiRequest(
     });
 
     if (decision.decision !== 'ALLOW') {
+      const outcome = describeDeniedDecision(decision);
       auditLogger.logEvent({
         actor: principal,
         tenant_id: tenantId,
         action: 'agent:execute',
         resource: { type: 'Agent', id: agentId },
-        result: 'DENIED',
+        result: outcome.auditResult,
         reason_code: decision.reason_code,
-        request_id: `req_${Date.now()}`,
+        request_id: requestId,
       });
-      const status = decision.decision === 'CONDITIONAL' ? 202 : 403;
-      return { status, data: { error: decision.decision === 'CONDITIONAL' ? 'APPROVAL_REQUIRED' : 'PERMISSION_DENIED', reason: decision.reason_code } };
+      // NOTE: MASTER.md Rule 17 (L2+ autonomy requires approval) is already
+      // enforced at the tool-invocation layer — see ToolInvoker.invokeTool's
+      // `approved` gate for IRREVERSIBLE_WRITE/PRIVILEGED_ACTION tools — not
+      // here. Gating agent:execute itself on autonomy_level would block an
+      // L2+ agent from even starting a harmless READ_ONLY run, which is
+      // broader than Rule 17 intends.
+      // TODO(spec-gap): there is no persisted Approval resource — once
+      // APPROVAL_REQUIRED fires, nothing lets a caller later approve and
+      // resume this specific request (no approval_id, no polling endpoint).
+      // Flagging rather than building this unprompted; see MASTER.md's
+      // Workflow/Approval phase.
+      return { status: outcome.httpStatus, data: { error: outcome.errorCode, reason: decision.reason_code, request_id: requestId } };
     }
 
     // Create execution via Durable Runtime Engine
@@ -215,7 +238,7 @@ function handleApiRequest(
       action: 'agent:execute',
       resource: { type: 'Execution', id: execution.id },
       result: 'SUCCESS',
-      request_id: `req_${Date.now()}`,
+      request_id: requestId,
     });
 
     // Record billing usage
@@ -230,6 +253,7 @@ function handleApiRequest(
       tenant_id: tenantId,
       created_at: new Date().toISOString(),
       checkpoint: 'INITIAL',
+      request_id: requestId,
     };
     executionHistory.unshift(record);
 
@@ -305,7 +329,7 @@ const server = http.createServer((req, res) => {
         /* ignore parse errors */
       }
 
-      const result = handleApiRequest(method, pathname, parsedBody);
+      const result = handleApiRequest(method, pathname, parsedBody, req.headers);
       res.writeHead(result.status, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify(result.data, null, 2));
     });
@@ -333,11 +357,18 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`\n═══════════════════════════════════════════════════════`);
-  console.log(`  AGEX AI OS — Unified Platform Server`);
-  console.log(`  Console:  http://localhost:${PORT}`);
-  console.log(`  API:      http://localhost:${PORT}/api/v1/health`);
-  console.log(`  Engine:   Durable Runtime + PDP + Audit + Billing`);
-  console.log(`═══════════════════════════════════════════════════════\n`);
-});
+// Only bind the port when run directly (`node server_web.js` / `npm start`),
+// not when imported — e.g. tests import handleApiRequest for direct
+// unit testing and must not incidentally start a real listening server.
+// (This file compiles to CommonJS — see tsconfig's "module": "NodeNext"
+// with no package.json "type": "module" — so require.main is available.)
+if (require.main === module) {
+  server.listen(PORT, () => {
+    console.log(`\n═══════════════════════════════════════════════════════`);
+    console.log(`  AGEX AI OS — Unified Platform Server`);
+    console.log(`  Console:  http://localhost:${PORT}`);
+    console.log(`  API:      http://localhost:${PORT}/api/v1/health`);
+    console.log(`  Engine:   Durable Runtime + PDP + Audit + Billing`);
+    console.log(`═══════════════════════════════════════════════════════\n`);
+  });
+}

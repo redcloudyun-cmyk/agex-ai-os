@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { generateResourceId } from '../src/common/utils.js';
-import { PolicyDecisionPoint } from '../src/identity/pdp.js';
+import { PolicyDecisionPoint, describeDeniedDecision } from '../src/identity/pdp.js';
+import { handleApiRequest } from '../src/server_web.js';
 import { ModelRouter, type ModelCandidate } from '../src/model-gateway/model-router.js';
 import { DurableRuntimeEngine } from '../src/runtime/runtime.engine.js';
 
@@ -78,6 +79,40 @@ test('2. Policy Decision Point (PDP) Authorization Evaluation', () => {
     principal_permissions: ['tenant:create'],
   });
   assert.strictEqual(highRiskDecision.decision, 'ALLOW');
+
+  // Test 2f. describeDeniedDecision must keep CONDITIONAL distinguishable
+  // from DENY in HTTP status, error code, and audit result — the three
+  // call sites (server.ts, server_web.ts, agent.executor.ts) all delegate
+  // to this single helper specifically so they can't drift apart again.
+  const deniedOutcome = describeDeniedDecision({ decision: 'DENY', reason_code: 'PERMISSION_MISSING' });
+  assert.strictEqual(deniedOutcome.httpStatus, 403);
+  assert.strictEqual(deniedOutcome.errorCode, 'PERMISSION_DENIED');
+  assert.strictEqual(deniedOutcome.auditResult, 'DENIED');
+
+  const conditionalOutcome = describeDeniedDecision({ decision: 'CONDITIONAL', reason_code: 'REQUIRE_APPROVAL' });
+  assert.strictEqual(conditionalOutcome.httpStatus, 202);
+  assert.strictEqual(conditionalOutcome.errorCode, 'APPROVAL_REQUIRED');
+  assert.strictEqual(conditionalOutcome.auditResult, 'PENDING_APPROVAL');
+});
+
+test('2g. server_web handleApiRequest reads tenant/principal from headers, not hardcoded constants', () => {
+  // Default (no headers) still works for the un-authenticated demo console
+  const defaulted = handleApiRequest('GET', '/api/v1/health', null);
+  assert.strictEqual(defaulted.status, 200);
+
+  // A caller-supplied X-AGEX-Tenant must actually end up on the created execution
+  const withHeaders = handleApiRequest(
+    'POST',
+    '/api/v1/executions',
+    { agent_id: 'agt_code_reviewer', objective: 'test' },
+    { 'x-agex-tenant': 'ten_custom_01', 'x-principal-id': 'usr_custom_01', 'x-request-id': 'req_correlated_01' }
+  );
+  assert.strictEqual(withHeaders.status, 201);
+  assert.strictEqual((withHeaders.data as any).tenant_id, 'ten_custom_01');
+
+  // A caller-supplied X-Request-Id must be echoed back for correlation
+  // rather than a fresh server-generated id replacing it.
+  assert.strictEqual((withHeaders.data as any).request_id, 'req_correlated_01');
 });
 
 test('3. Model Router Security-First Selection Order', () => {
