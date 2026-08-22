@@ -10,7 +10,8 @@ import { MultiAgentOrchestrator } from '../src/agent/multi-agent.orchestrator.js
 
 test('1. Task Dispatcher & Lease Acquisition', () => {
   const dispatcher = new TaskDispatcher();
-  const task = dispatcher.createTask('exe_100', 'MODEL_INFERENCE');
+  const tenantContext = { tenant_id: 'ten_001', scope_type: 'TENANT' as const };
+  const task = dispatcher.createTask(tenantContext, 'exe_100', 'MODEL_INFERENCE');
 
   assert.strictEqual(task.status, 'QUEUED');
 
@@ -20,6 +21,19 @@ test('1. Task Dispatcher & Lease Acquisition', () => {
 
   const completed = dispatcher.completeTask(task.id, 'worker_1');
   assert.strictEqual(completed.status, 'SUCCEEDED');
+
+  // A completed (terminal) task must never be re-leased
+  assert.throws(
+    () => dispatcher.acquireLease(task.id, 'worker_2', 5000),
+    (err: any) => err.code === 'TASK_ALREADY_TERMINAL'
+  );
+
+  // Cross-tenant lease attempts are rejected
+  const otherTenantTask = dispatcher.createTask(tenantContext, 'exe_200', 'MODEL_INFERENCE');
+  assert.throws(
+    () => dispatcher.acquireLease(otherTenantTask.id, 'worker_3', 5000, 'ten_other'),
+    (err: any) => err.code === 'CROSS_TENANT_ACCESS_DENIED'
+  );
 });
 
 test('2. Runtime Reconciler Worker Crash Recovery', () => {
@@ -28,7 +42,7 @@ test('2. Runtime Reconciler Worker Crash Recovery', () => {
   const tenantContext = { tenant_id: 'ten_001', scope_type: 'TENANT' as const };
 
   const exe = engine.createExecution(tenantContext, 'agt_123');
-  const task = dispatcher.createTask(exe.id, 'PLUGIN_EXECUTION');
+  const task = dispatcher.createTask(tenantContext, exe.id, 'PLUGIN_EXECUTION');
 
   // Acquire lease with negative duration to simulate immediate lease expiration / worker crash
   dispatcher.acquireLease(task.id, 'crashed_worker', -100);

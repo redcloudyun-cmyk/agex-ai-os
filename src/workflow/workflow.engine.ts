@@ -36,6 +36,28 @@ export interface WorkflowDefinition {
   edges: WorkflowEdgeDefinition[];
 }
 
+// Step types this minimal engine actually knows how to execute. CONDITION,
+// SWITCH, PARALLEL, JOIN, LOOP, WAIT, EVENT_WAIT, SUB_WORKFLOW, and
+// EMIT_EVENT are valid per the Workflow schema but require branching/
+// concurrency/expression-evaluation semantics that aren't implemented yet
+// (WorkflowEdgeDefinition.condition has no defined expression language) —
+// treating them as generic pass-through steps would silently mis-execute
+// any real branch/loop/fan-out, so they're rejected instead.
+// TODO(spec-gap): implement once condition-expression semantics and
+// parallel/loop execution are specified.
+const SUPPORTED_STEP_TYPES: ReadonlySet<StepType> = new Set([
+  'AGENT',
+  'MODEL',
+  'PLUGIN',
+  'FUNCTION',
+  'APPROVAL',
+  'END',
+]);
+
+// Rule 16 (Retry는 Bounded다) applied by analogy to graph traversal: a
+// malformed or intentionally cyclic edge list must not hang the process.
+const MAX_WORKFLOW_STEPS = 500;
+
 export class WorkflowEngine {
   private runtimeEngine: DurableRuntimeEngine;
 
@@ -53,10 +75,36 @@ export class WorkflowEngine {
 
     const stepResults: Record<string, unknown> = {};
     let currentStepId: string | null = workflow.steps[0]?.id || null;
+    let stepsVisited = 0;
 
     while (currentStepId) {
+      if (++stepsVisited > MAX_WORKFLOW_STEPS) {
+        throw new AgexError({
+          code: 'WORKFLOW_STEP_LIMIT_EXCEEDED',
+          category: 'RUNTIME',
+          message: `Workflow ${workflow.id} exceeded ${MAX_WORKFLOW_STEPS} step traversals; likely an unbounded cycle in edges.`,
+          request_id: 'wf_req',
+        });
+      }
+
       const step = workflow.steps.find(s => s.id === currentStepId);
-      if (!step) break;
+      if (!step) {
+        throw new AgexError({
+          code: 'WORKFLOW_STEP_NOT_FOUND',
+          category: 'VALIDATION',
+          message: `Workflow ${workflow.id} has an edge pointing to unknown step id ${currentStepId}.`,
+          request_id: 'wf_req',
+        });
+      }
+
+      if (!SUPPORTED_STEP_TYPES.has(step.type)) {
+        throw new AgexError({
+          code: 'UNSUPPORTED_STEP_TYPE',
+          category: 'VALIDATION',
+          message: `Step ${step.id} has type ${step.type}, which this Workflow Engine does not yet execute.`,
+          request_id: 'wf_req',
+        });
+      }
 
       if (step.type === 'END') {
         stepResults[step.id] = { status: 'COMPLETED' };

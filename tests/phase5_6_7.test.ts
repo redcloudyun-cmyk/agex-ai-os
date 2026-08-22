@@ -31,6 +31,52 @@ test('1. Workflow Engine Step Execution & Human Approval Pause', async () => {
   assert.strictEqual(step2Result.status, 'WAITING_FOR_HUMAN_APPROVAL');
 });
 
+test('1b. Workflow Engine rejects malformed graphs instead of silently completing', async () => {
+  const runtime = new DurableRuntimeEngine();
+  const wfEngine = new WorkflowEngine(runtime);
+  const tenantContext = { tenant_id: 'ten_001', scope_type: 'TENANT' as const };
+
+  // Edge points at a step id that doesn't exist in `steps`
+  const danglingWorkflow: WorkflowDefinition = {
+    id: 'wfl_dangling_edge',
+    steps: [{ id: 'step_1', type: 'AGENT', name: 'Analyze Task' }],
+    edges: [{ from: 'step_1', to: 'step_missing' }],
+  };
+  await assert.rejects(
+    () => wfEngine.executeWorkflow(tenantContext, danglingWorkflow, {}),
+    (err: any) => err.code === 'WORKFLOW_STEP_NOT_FOUND'
+  );
+
+  // Step type without implemented branching/loop semantics must not be
+  // silently treated as a generic pass-through step
+  const unsupportedWorkflow: WorkflowDefinition = {
+    id: 'wfl_unsupported_step',
+    steps: [{ id: 'step_1', type: 'PARALLEL', name: 'Fan Out' }],
+    edges: [],
+  };
+  await assert.rejects(
+    () => wfEngine.executeWorkflow(tenantContext, unsupportedWorkflow, {}),
+    (err: any) => err.code === 'UNSUPPORTED_STEP_TYPE'
+  );
+
+  // A cycle in the edge list must not hang the process forever
+  const cyclicWorkflow: WorkflowDefinition = {
+    id: 'wfl_cyclic',
+    steps: [
+      { id: 'step_1', type: 'AGENT', name: 'A' },
+      { id: 'step_2', type: 'AGENT', name: 'B' },
+    ],
+    edges: [
+      { from: 'step_1', to: 'step_2' },
+      { from: 'step_2', to: 'step_1' },
+    ],
+  };
+  await assert.rejects(
+    () => wfEngine.executeWorkflow(tenantContext, cyclicWorkflow, {}),
+    (err: any) => err.code === 'WORKFLOW_STEP_LIMIT_EXCEEDED'
+  );
+});
+
 test('2. Knowledge Engine Candidate Retrieval ACL Filter', () => {
   const knEngine = new KnowledgeEngine();
 
