@@ -34,13 +34,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // ─── Output Format Picker (chat / document / image / slides / video / code) ───
+  // Lets the user pick what deliverable they want back before running a
+  // task, instead of only ever getting a plain chat reply.
+  const formatChipGroup = document.getElementById('format-chip-group');
+  let selectedOutputFormat = 'chat';
+  if (formatChipGroup) {
+    formatChipGroup.querySelectorAll('.format-chip').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        formatChipGroup.querySelectorAll('.format-chip').forEach((c) => c.classList.remove('active'));
+        chip.classList.add('active');
+        selectedOutputFormat = chip.getAttribute('data-format');
+      });
+    });
+  }
+
   // ─── Run Task Button ───
   if (btnRun && promptInput) {
     btnRun.addEventListener('click', () => {
       const taskText = promptInput.value.trim();
       if (!taskText) return;
       const prefix = i18n ? i18n.t('toast.dispatched') : '작업 디스패치 완료:';
-      showToast(`${prefix} "${taskText.substring(0, 30)}..."`);
+      const activeChip = formatChipGroup ? formatChipGroup.querySelector('.format-chip.active') : null;
+      const formatLabel = selectedOutputFormat !== 'chat' && activeChip ? activeChip.querySelector('span').textContent : '';
+      const formatTag = formatLabel ? `[${formatLabel}] ` : '';
+      showToast(`${prefix} ${formatTag}"${taskText.substring(0, 30)}..."`);
       promptInput.value = '';
     });
   }
@@ -74,11 +92,46 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // ─── Knowledge Base Upload Button ───
+  const btnKnowledgeUpload = document.getElementById('btn-knowledge-upload');
+  if (btnKnowledgeUpload) {
+    const hiddenKnowledgeInput = document.createElement('input');
+    hiddenKnowledgeInput.type = 'file';
+    hiddenKnowledgeInput.style.display = 'none';
+    document.body.appendChild(hiddenKnowledgeInput);
+
+    btnKnowledgeUpload.addEventListener('click', () => hiddenKnowledgeInput.click());
+    hiddenKnowledgeInput.addEventListener('change', () => {
+      const file = hiddenKnowledgeInput.files && hiddenKnowledgeInput.files[0];
+      if (!file) return;
+      const template = i18n ? i18n.t('toast.fileAttached') : '{name} 파일이 첨부되었습니다.';
+      showToast(template.replace('{name}', file.name));
+      hiddenKnowledgeInput.value = '';
+    });
+  }
+
+  // ─── "새 에이전트 만들기" Card (no agent builder yet) ───
+  const btnAgentNew = document.getElementById('btn-agent-new');
+  if (btnAgentNew) {
+    btnAgentNew.addEventListener('click', () => {
+      showToast(i18n ? i18n.t('toast.comingSoon') : '준비 중인 기능입니다.');
+    });
+  }
+
   // ─── System Settings (popover item, no dedicated page yet) ───
   const popSystemSettings = document.getElementById('pop-system-settings');
   if (popSystemSettings) {
     popSystemSettings.addEventListener('click', () => {
       showToast(i18n ? i18n.t('toast.comingSoon') : '준비 중인 기능입니다.');
+    });
+  }
+
+  // ─── Logout (popover item, no real auth session yet) ───
+  const popLogout = document.getElementById('pop-logout');
+  if (popLogout) {
+    popLogout.addEventListener('click', () => {
+      showToast(i18n ? i18n.t('toast.loggedOut') : '로그아웃되었습니다.');
+      if (manusPopover) manusPopover.style.display = 'none';
     });
   }
 
