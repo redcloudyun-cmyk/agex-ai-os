@@ -1207,6 +1207,77 @@ header {
   to { opacity: 0.3; }
 }
 
+/* Free-Tier House Ad Widget */
+.ad-widget-free {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  width: 240px;
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  box-shadow: var(--shadow-popover);
+  padding: 0.7rem 0.8rem 0.75rem;
+  z-index: 120;
+  animation: adSlideUp 0.3s ease-out;
+}
+
+.ad-widget-free.hidden {
+  display: none;
+}
+
+@keyframes adSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ad-label {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-light);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  padding: 0.08rem 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.ad-headline {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-main);
+  line-height: 1.4;
+  margin-bottom: 0.6rem;
+}
+
+.ad-cta {
+  width: 100%;
+  background: var(--gradient-brand);
+  color: #ffffff;
+  border: none;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.ad-cta:hover {
+  opacity: 0.92;
+}
+
+@media (max-width: 768px) {
+  .ad-widget-free {
+    right: 0.6rem;
+    bottom: 0.6rem;
+    width: 200px;
+  }
+}
+
 /* Hamburger Button (hidden on desktop) */
 .hamburger-btn {
   display: none;

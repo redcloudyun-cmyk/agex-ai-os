@@ -562,6 +562,18 @@
       </section>
     </div>
   </div>
+
+  <!-- Free-tier house ad. Only shown when the account is on the Free plan.
+       By design there is no dismiss/close control — upgrading to Pro is the
+       only way to remove it (see #ad-widget-free in app.js). -->
+  <div class="ad-widget-free" id="ad-widget-free">
+    <span class="ad-label" data-i18n="ad.label">광고</span>
+    <div class="ad-body">
+      <div class="ad-headline" data-i18n="ad.headline">광고 없이 AGEX Pro로 더 빠르게 작업하세요</div>
+      <button class="ad-cta" id="btn-ad-upgrade" data-i18n="ad.cta">업그레이드</button>
+    </div>
+  </div>
+
   <script src="i18n.js"></script>
   <script src="app.js"></script>
 </body>

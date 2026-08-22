@@ -137,6 +137,11 @@
       'toast.ttsUnsupported': '이 브라우저는 음성 출력을 지원하지 않습니다.',
       'toast.defaultSpeak': 'AGEX AI 워크스페이스에 오신 것을 환영합니다. 원하시는 작업을 말씀해 주세요.',
       'toast.connectDone': '연동 완료',
+
+      'ad.label': '광고',
+      'ad.headline': '광고 없이 AGEX Pro로 더 빠르게 작업하세요',
+      'ad.cta': '업그레이드',
+      'toast.upgraded': 'AGEX Pro로 업그레이드되었습니다.',
     },
     en: {
       'nav.newTask': 'New Task',
@@ -270,6 +275,11 @@
       'toast.ttsUnsupported': "This browser doesn't support voice output.",
       'toast.defaultSpeak': "Welcome to the AGEX AI Workspace. Tell me what you'd like to do.",
       'toast.connectDone': 'connected',
+
+      'ad.label': 'Ad',
+      'ad.headline': 'Go ad-free and work faster with AGEX Pro',
+      'ad.cta': 'Upgrade',
+      'toast.upgraded': 'Upgraded to AGEX Pro.',
     },
   };
 

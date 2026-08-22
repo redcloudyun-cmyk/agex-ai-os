@@ -106,6 +106,33 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // ─── Free-Tier House Ad Widget ───
+  // Plan tier isn't wired to real billing/entitlement data yet (Phase 10),
+  // so this reads a local mock flag: 'free' (default, ad shown) or 'pro'.
+  // Intentionally no dismiss/close control — upgrading is the only way to
+  // remove the ad, matching how the free tier is meant to monetize.
+  const adWidget = document.getElementById('ad-widget-free');
+  const btnAdUpgrade = document.getElementById('btn-ad-upgrade');
+
+  function isFreePlan() {
+    return (localStorage.getItem('agex_plan') || 'free') === 'free';
+  }
+
+  function refreshAdWidget() {
+    if (!adWidget) return;
+    adWidget.classList.toggle('hidden', !isFreePlan());
+  }
+
+  refreshAdWidget();
+
+  if (btnAdUpgrade) {
+    btnAdUpgrade.addEventListener('click', () => {
+      localStorage.setItem('agex_plan', 'pro');
+      refreshAdWidget();
+      showToast(i18n ? i18n.t('toast.upgraded') : 'AGEX Pro로 업그레이드되었습니다.');
+    });
+  }
+
   // ─── Mobile Hamburger Menu Toggle ───
   const btnHamburger = document.getElementById('btn-hamburger');
   const sidebarLeft = document.getElementById('sidebar-left');
