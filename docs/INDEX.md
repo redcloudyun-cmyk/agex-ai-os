@@ -8,6 +8,7 @@ AGEX 프로젝트의 전체 문서 체계 및 도메인별 필독 사양 색인�
 - [AGENTS.md](file:///f:/개발%20프로젝트/Agex%20project/AGENTS.md) — AI Coding Agent 최상위 규칙 및 실행 지침
 - [CLAUDE.md](file:///f:/개발%20프로젝트/Agex%20project/CLAUDE.md) — Claude / AI Agent 전용 가이드라인
 - [MASTER.md](file:///f:/개발%20프로젝트/Agex%20project/MASTER.md) — AGEX Master Specification (LEVEL 0 SSOT)
+- [AGEX-UNIFIED-AGENT-PLATFORM.md](file:///f:/개발%20프로젝트/Agex%20project/AGEX-UNIFIED-AGENT-PLATFORM.md) — Personal Agent Runtime 통합 개발 지시서 (2026-08-22 추가). **주의**: MASTER.md와 마찬가지로 최상위 권위를 자칭하며, Standard/Personal Agent를 단일 코드베이스·단일 Runtime Core로 통합할 것을 지시함 — 이는 이전에 합의된 "데스크톱 에이전트는 별도 제품/코드베이스" 방향과 정면으로 배치됨. 실제 구현 착수 전 두 문서 간 우선순위를 확정할 것.
 - [GLOSSARY.md](file:///f:/개발%20프로젝트/Agex%20project/docs/GLOSSARY.md) — AGEX Canonical Glossary (표준 용어집)
 
 ---
