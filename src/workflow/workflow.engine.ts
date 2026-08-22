@@ -113,7 +113,7 @@ export class WorkflowEngine {
 
       if (step.type === 'APPROVAL') {
         // Pause execution and set state to WAITING with reason APPROVAL
-        this.runtimeEngine.transitionState(execution.id, 'WAITING', undefined, tenantContext.tenant_id);
+        this.runtimeEngine.transitionState(execution.id, 'WAITING', undefined, tenantContext.tenant_id, 'APPROVAL');
         stepResults[step.id] = { status: 'WAITING_FOR_HUMAN_APPROVAL' };
         return { execution, step_results: stepResults };
       }

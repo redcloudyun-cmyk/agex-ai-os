@@ -15,6 +15,15 @@ export type ExecutionState =
   | 'TIMED_OUT'
   | 'TERMINATED';
 
+// specs/schemas/runtime/execution.schema.json status.waiting_reason
+export type ExecutionWaitingReason =
+  | 'APPROVAL'
+  | 'USER_INPUT'
+  | 'EVENT'
+  | 'TIME'
+  | 'CHILD_EXECUTION'
+  | 'DEPENDENCY';
+
 export interface ExecutionRecord {
   id: string;
   tenant_id: string;
@@ -25,6 +34,7 @@ export interface ExecutionRecord {
   updated_at: string;
   checkpoint_id?: string | null;
   result?: unknown;
+  waiting_reason?: ExecutionWaitingReason | null;
 }
 
 const TERMINAL_STATES: ReadonlySet<ExecutionState> = new Set([
@@ -65,12 +75,16 @@ export class DurableRuntimeEngine {
    * match or the call is rejected (Rule 13: Cross-Tenant access is Default
    * Deny). Omit only for trusted internal system callers (e.g. the
    * Reconciler) that intentionally operate across tenants.
+   * @param waitingReason Only meaningful when newState is 'WAITING' (per
+   * execution.schema.json status.waiting_reason) — cleared automatically on
+   * any other transition so it never lingers stale on a resumed execution.
    */
   public transitionState(
     id: string,
     newState: ExecutionState,
     result?: unknown,
-    expectedTenantId?: string
+    expectedTenantId?: string,
+    waitingReason?: ExecutionWaitingReason | null
   ): ExecutionRecord {
     const record = this.getOwnedRecord(id, expectedTenantId);
     this.assertNotTerminal(record);
@@ -80,6 +94,7 @@ export class DurableRuntimeEngine {
     if (result !== undefined) {
       record.result = result;
     }
+    record.waiting_reason = newState === 'WAITING' ? (waitingReason ?? null) : null;
 
     this.executionStore.set(id, record);
     return record;

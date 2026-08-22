@@ -27,8 +27,13 @@ test('1. Workflow Engine Step Execution & Human Approval Pause', async () => {
   const result = await wfEngine.executeWorkflow(tenantContext, workflow, {});
 
   assert.strictEqual(result.execution.state, 'WAITING');
+  assert.strictEqual(result.execution.waiting_reason, 'APPROVAL');
   const step2Result = result.step_results['step_2'] as { status: string };
   assert.strictEqual(step2Result.status, 'WAITING_FOR_HUMAN_APPROVAL');
+
+  // waiting_reason must not linger once the execution resumes past WAITING
+  const resumed = runtime.transitionState(result.execution.id, 'RUNNING', undefined, tenantContext.tenant_id);
+  assert.strictEqual(resumed.waiting_reason, null);
 });
 
 test('1b. Workflow Engine rejects malformed graphs instead of silently completing', async () => {
