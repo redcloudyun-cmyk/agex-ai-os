@@ -53,6 +53,31 @@ test('2. Policy Decision Point (PDP) Authorization Evaluation', () => {
   });
   assert.strictEqual(conditionalDecision.decision, 'CONDITIONAL');
   assert.strictEqual(conditionalDecision.reason_code, 'REQUIRE_APPROVAL');
+
+  // Test 2d. CRITICAL-risk actions (per specs/permissions/core.permissions.yaml)
+  // require approval even though they don't match either hardcoded verb.
+  const criticalDecision = pdp.evaluate({
+    principal: { type: 'user', id: 'usr_123' },
+    tenant_context: { tenant_id: 'ten_001', scope_type: 'TENANT' },
+    action: 'secret:manage',
+    resource_type: 'Secret',
+    resource_id: 'sec_999',
+    principal_permissions: ['secret:manage'],
+  });
+  assert.strictEqual(criticalDecision.decision, 'CONDITIONAL');
+  assert.strictEqual(criticalDecision.reason_code, 'REQUIRE_APPROVAL');
+
+  // Test 2e. HIGH-risk (but not CRITICAL) actions stay ALLOW — the console's
+  // core task-execution flow depends on agent:execute never being gated.
+  const highRiskDecision = pdp.evaluate({
+    principal: { type: 'user', id: 'usr_123' },
+    tenant_context: { tenant_id: 'ten_001', scope_type: 'TENANT' },
+    action: 'tenant:create',
+    resource_type: 'Tenant',
+    resource_id: 'ten_new',
+    principal_permissions: ['tenant:create'],
+  });
+  assert.strictEqual(highRiskDecision.decision, 'ALLOW');
 });
 
 test('3. Model Router Security-First Selection Order', () => {

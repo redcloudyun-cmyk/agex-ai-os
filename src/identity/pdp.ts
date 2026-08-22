@@ -1,4 +1,5 @@
 import type { PrincipalReference, TenantContext } from '../common/types.js';
+import { PERMISSION_RISK } from './permission.registry.js';
 
 export interface AuthorizationRequest {
   principal: PrincipalReference;
@@ -54,8 +55,21 @@ export class PolicyDecisionPoint {
       };
     }
 
-    // 3. Risk / Obligation Check (Example L2 Approval Rule)
-    if (request.action.endsWith(':delete') || request.action === 'agent:publish') {
+    // 3. Risk / Obligation Check. CRITICAL-risk actions (per the canonical
+    // permission registry — specs/permissions/*.yaml, mirrored in
+    // permission.registry.ts) always require approval, on top of the two
+    // historically hardcoded high-risk verb patterns.
+    // NOTE: several actions are rated HIGH (not CRITICAL) in that registry,
+    // e.g. agent:execute — the console's core "run task" flow depends on
+    // agent:execute being immediately ALLOW-able, so HIGH-risk actions are
+    // intentionally NOT auto-gated here. Whether HIGH-risk actions should
+    // ever require approval is an open product question, not resolved by
+    // this check — see CLAUDE.md's Specification Gap Behavior.
+    if (
+      request.action.endsWith(':delete') ||
+      request.action === 'agent:publish' ||
+      PERMISSION_RISK[request.action] === 'CRITICAL'
+    ) {
       return {
         decision: 'CONDITIONAL',
         reason_code: 'REQUIRE_APPROVAL',
